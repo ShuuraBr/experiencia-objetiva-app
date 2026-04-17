@@ -1,18 +1,20 @@
 @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap");
 
 :root {
-  --bg: #f3efe6;
-  --bg-soft: rgba(255, 255, 255, 0.64);
-  --surface: rgba(255, 255, 255, 0.78);
-  --surface-strong: #fffaf2;
-  --text: #1d241f;
-  --text-soft: #5b645d;
-  --line: rgba(29, 36, 31, 0.1);
-  --accent: #0f766e;
-  --accent-strong: #115e59;
-  --accent-soft: rgba(15, 118, 110, 0.12);
-  --warning: #c26d1f;
-  --shadow: 0 24px 60px rgba(26, 32, 27, 0.09);
+  --bg: #f2f5ff;
+  --bg-soft: rgba(242, 245, 255, 0.78);
+  --surface: rgba(255, 255, 255, 0.88);
+  --surface-strong: #ffffff;
+  --text: #000928;
+  --text-soft: rgba(0, 9, 40, 0.68);
+  --line: rgba(14, 46, 155, 0.12);
+  --accent: #0e2e9b;
+  --accent-strong: #000928;
+  --accent-soft: rgba(14, 46, 155, 0.1);
+  --success: #00965e;
+  --success-strong: #007349;
+  --warning: #00965e;
+  --shadow: 0 24px 60px rgba(0, 9, 40, 0.12);
   --radius-lg: 28px;
   --radius-md: 18px;
   --radius-sm: 12px;
@@ -31,8 +33,9 @@ body {
   font-family: "Manrope", sans-serif;
   color: var(--text);
   background:
-    radial-gradient(circle at top left, rgba(15, 118, 110, 0.16), transparent 34%),
-    radial-gradient(circle at bottom right, rgba(194, 109, 31, 0.14), transparent 28%),
+    radial-gradient(circle at top left, rgba(14, 46, 155, 0.24), transparent 32%),
+    radial-gradient(circle at top right, rgba(0, 150, 94, 0.16), transparent 22%),
+    radial-gradient(circle at bottom left, rgba(0, 9, 40, 0.1), transparent 28%),
     var(--bg);
 }
 
@@ -40,11 +43,12 @@ body::before {
   content: "";
   position: fixed;
   inset: 0;
-  background-image: linear-gradient(rgba(29, 36, 31, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(29, 36, 31, 0.02) 1px, transparent 1px);
-  background-size: 34px 34px;
+  background-image:
+    linear-gradient(rgba(14, 46, 155, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(14, 46, 155, 0.035) 1px, transparent 1px);
+  background-size: 42px 42px;
   pointer-events: none;
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
 a {
@@ -73,7 +77,7 @@ textarea {
 .hero-shell,
 .survey-shell {
   position: relative;
-  width: min(1180px, calc(100vw - 32px));
+  width: min(1280px, calc(100vw - 32px));
   margin: 0 auto;
   padding: 24px 0 48px;
 }
@@ -89,9 +93,9 @@ textarea {
 
 .site-header {
   padding: 8px 0 24px;
+  align-items: center;
 }
 
-.site-header h1,
 .survey-hero h1,
 .topbar h2,
 .sidebar-copy h1 {
@@ -100,8 +104,58 @@ textarea {
   letter-spacing: -0.05em;
 }
 
-.site-header h1 {
-  font-size: clamp(1.75rem, 2.4vw, 2.4rem);
+.brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  color: inherit;
+}
+
+.landing-brand {
+  gap: 20px;
+}
+
+.brand-logo-shell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 22px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(14, 46, 155, 0.12);
+  box-shadow: 0 16px 36px rgba(0, 9, 40, 0.1);
+}
+
+.header-logo-shell {
+  min-width: min(42vw, 300px);
+}
+
+.sidebar-logo-shell {
+  width: min(100%, 290px);
+  padding: 18px 20px;
+  border-radius: 26px;
+}
+
+.survey-logo-shell {
+  padding: 18px 20px;
+  border-radius: 26px;
+}
+
+.brand-logo {
+  width: min(100%, 260px);
+  height: auto;
+}
+
+.brand-lockup-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.brand-caption {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
 .hero-grid {
@@ -120,19 +174,24 @@ textarea {
 .survey-note {
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 250, 242, 0.84));
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(242, 245, 255, 0.86));
   box-shadow: var(--shadow);
   backdrop-filter: blur(20px);
 }
 
 .hero-copy {
   padding: clamp(28px, 5vw, 56px);
-  min-height: 520px;
+  min-height: 560px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   border-radius: 40px;
+  color: white;
+  background:
+    radial-gradient(circle at top right, rgba(0, 150, 94, 0.22), transparent 28%),
+    linear-gradient(140deg, #000928 0%, #07195f 42%, #0e2e9b 100%);
+  border-color: rgba(242, 245, 255, 0.12);
 }
 
 .hero-copy::after,
@@ -144,8 +203,24 @@ textarea {
   width: 180px;
   height: 180px;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(15, 118, 110, 0.18), transparent 70%);
+  background: radial-gradient(circle, rgba(0, 150, 94, 0.18), transparent 70%);
   pointer-events: none;
+}
+
+.hero-brand-card {
+  display: inline-flex;
+  align-self: flex-start;
+  max-width: min(100%, 390px);
+  margin-bottom: 26px;
+  padding: 18px 20px;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 20px 44px rgba(0, 9, 40, 0.2);
+}
+
+.hero-logo {
+  width: min(100%, 350px);
+  height: auto;
 }
 
 .hero-tag,
@@ -158,18 +233,18 @@ textarea {
 }
 
 .eyebrow {
-  color: var(--accent-strong);
+  color: var(--accent);
   font-weight: 700;
 }
 
 .mono-label {
   font-family: "IBM Plex Mono", monospace;
-  color: var(--warning);
+  color: var(--success);
 }
 
 .hero-copy h2 {
   margin: 0;
-  max-width: 10ch;
+  max-width: 11ch;
   font-size: clamp(2.9rem, 7vw, 5.5rem);
   line-height: 0.95;
   letter-spacing: -0.07em;
@@ -182,6 +257,20 @@ textarea {
 .survey-note p {
   color: var(--text-soft);
   line-height: 1.6;
+}
+
+.hero-copy .eyebrow,
+.hero-copy .hero-tag {
+  color: rgba(242, 245, 255, 0.74);
+}
+
+.hero-tag {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.hero-copy .hero-text {
+  color: rgba(242, 245, 255, 0.86);
 }
 
 .hero-text {
@@ -214,12 +303,12 @@ textarea {
 
 .primary-button {
   color: white;
-  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  background: linear-gradient(135deg, var(--success), var(--success-strong));
 }
 
 .ghost-button {
   border-color: var(--line);
-  background: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.76);
 }
 
 .small {
@@ -248,7 +337,7 @@ textarea {
 .metric-card {
   border-radius: 20px;
   padding: 18px;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.84);
   border: 1px solid var(--line);
 }
 
@@ -265,6 +354,7 @@ textarea {
   margin-top: 6px;
   font-size: clamp(1.8rem, 3vw, 2.5rem);
   letter-spacing: -0.06em;
+  color: var(--accent-strong);
 }
 
 .hero-note {
@@ -295,9 +385,9 @@ textarea {
 .signal-item {
   padding: 22px;
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.7);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(242, 245, 255, 0.82));
   border: 1px solid var(--line);
-  box-shadow: 0 18px 36px rgba(26, 32, 27, 0.05);
+  box-shadow: 0 18px 36px rgba(0, 9, 40, 0.08);
 }
 
 .feature-strip h3,
@@ -368,7 +458,7 @@ textarea {
 }
 
 .inline-link {
-  color: var(--accent-strong);
+  color: var(--success);
   font-weight: 700;
 }
 
@@ -392,7 +482,9 @@ textarea {
   top: 18px;
   height: calc(100vh - 36px);
   padding: 24px;
-  background: linear-gradient(180deg, rgba(17, 24, 39, 0.98), rgba(15, 23, 42, 0.94));
+  background:
+    radial-gradient(circle at top right, rgba(0, 150, 94, 0.18), transparent 22%),
+    linear-gradient(180deg, rgba(0, 9, 40, 0.99), rgba(8, 22, 84, 0.96));
   color: white;
   overflow: hidden;
 }
@@ -404,23 +496,8 @@ textarea {
   width: 220px;
   height: 220px;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(15, 118, 110, 0.55), transparent 70%);
+  background: radial-gradient(circle, rgba(14, 46, 155, 0.5), transparent 70%);
   pointer-events: none;
-}
-
-.brand-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 14px;
-  color: white;
-}
-
-.brand-mark {
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #34d399, #f59e0b);
-  box-shadow: 0 0 30px rgba(52, 211, 153, 0.55);
 }
 
 .brand-link p,
@@ -434,6 +511,11 @@ textarea {
 .sidebar-copy p,
 .sidebar-section p {
   color: rgba(255, 255, 255, 0.75);
+}
+
+.dashboard-sidebar .eyebrow,
+.dashboard-sidebar .mono-label {
+  color: #8bd3b5;
 }
 
 .sidebar-copy {
@@ -585,7 +667,7 @@ textarea {
 .trend-bar-meter span {
   width: 100%;
   border-radius: 999px 999px 14px 14px;
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.95), rgba(17, 94, 89, 0.6));
+  background: linear-gradient(180deg, rgba(14, 46, 155, 0.95), rgba(0, 150, 94, 0.7));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
@@ -645,15 +727,15 @@ textarea {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, rgba(15, 118, 110, 0.95), rgba(194, 109, 31, 0.82));
+  background: linear-gradient(90deg, rgba(14, 46, 155, 0.95), rgba(0, 150, 94, 0.88));
 }
 
 .status-pill {
   display: inline-flex;
   padding: 8px 12px;
   border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent-strong);
+  background: rgba(0, 150, 94, 0.12);
+  color: var(--success);
   font-weight: 700;
   font-size: 0.82rem;
 }
@@ -663,8 +745,8 @@ textarea {
   max-width: 180px;
   padding: 12px;
   border-radius: 22px;
-  border: 1px dashed rgba(29, 36, 31, 0.14);
-  background: white;
+  border: 1px dashed rgba(14, 46, 155, 0.16);
+  background: var(--bg);
 }
 
 .link-box input {
@@ -683,14 +765,30 @@ textarea {
 .survey-hero {
   padding: clamp(28px, 5vw, 44px);
   border-radius: 34px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 250, 242, 0.84));
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  background:
+    radial-gradient(circle at top right, rgba(0, 150, 94, 0.18), transparent 24%),
+    linear-gradient(145deg, rgba(0, 9, 40, 0.99), rgba(14, 46, 155, 0.96));
+  border: 1px solid rgba(242, 245, 255, 0.12);
   box-shadow: var(--shadow);
+  color: white;
 }
 
 .survey-hero h1 {
   font-size: clamp(2.3rem, 5vw, 4rem);
   letter-spacing: -0.06em;
+}
+
+.survey-brand-block {
+  display: grid;
+  gap: 22px;
+}
+
+.survey-brand-block .eyebrow {
+  color: rgba(242, 245, 255, 0.74);
+}
+
+.survey-hero .survey-meta {
+  color: rgba(242, 245, 255, 0.82);
 }
 
 .survey-card {
@@ -749,6 +847,7 @@ textarea {
   background: linear-gradient(135deg, var(--accent), var(--accent-strong));
   color: white;
   transform: translateY(-2px);
+  box-shadow: 0 16px 24px rgba(14, 46, 155, 0.22);
 }
 
 .identity-grid {
