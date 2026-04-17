@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Avaliar atendimento | Experiencia Objetiva</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="survey-body">
+    <main class="survey-shell">
+      <section class="survey-hero reveal">
+        <div>
+          <p class="eyebrow">Avaliacao de experiencia</p>
+          <h1 id="surveyTitle">Como foi sua experiencia na Objetiva?</h1>
+          <p class="survey-meta" id="surveyMeta">Carregando contexto da avaliacao...</p>
+        </div>
+        <div class="survey-note">
+          <p class="mono-label">Uso interno</p>
+          <p>A avaliacao sera utilizada exclusivamente para melhoria dos servicos prestados, de forma interna e confidencial.</p>
+        </div>
+      </section>
+
+      <section class="survey-card reveal delayed" id="surveyCard">
+        <form id="surveyForm" class="survey-form">
+          <div class="question-block">
+            <label>1. Como foi sua experiencia geral na Objetiva?</label>
+            <div class="rating-row" data-field="overallScore"></div>
+          </div>
+
+          <div class="question-block">
+            <label>2. Qual foi a qualidade do atendimento recebido?</label>
+            <div class="rating-row" data-field="serviceQuality"></div>
+          </div>
+
+          <div class="question-block">
+            <label>3. As orientacoes foram claras?</label>
+            <div class="rating-row" data-field="guidanceClarity"></div>
+          </div>
+
+          <div class="question-block">
+            <label>4. A solucao apresentada foi adequada para sua necessidade?</label>
+            <div class="rating-row" data-field="solutionFit"></div>
+          </div>
+
+          <div class="question-block">
+            <label>5. Como voce avalia a eficiencia do processo?</label>
+            <div class="rating-row" data-field="operationalEfficiency"></div>
+          </div>
+
+          <div class="question-block" id="deliveryBlock" hidden>
+            <label>6. Como voce avalia a entrega do produto?</label>
+            <div class="rating-row" data-field="deliveryRating"></div>
+          </div>
+
+          <label class="full-span">
+            <span>Comentario adicional (opcional)</span>
+            <textarea name="comment" rows="4" placeholder="Se desejar, descreva o que funcionou bem ou o que pode melhorar."></textarea>
+          </label>
+
+          <label class="checkbox-row">
+            <input type="checkbox" name="anonymous" checked />
+            <span>Enviar avaliacao de forma anonima</span>
+          </label>
+
+          <div class="identity-grid" id="identityFields" hidden>
+            <label>
+              <span>Nome</span>
+              <input type="text" name="customerName" placeholder="Seu nome" />
+            </label>
+            <label>
+              <span>Contato</span>
+              <input type="text" name="contactChannel" placeholder="Telefone, e-mail ou WhatsApp" />
+            </label>
+          </div>
+
+          <button class="primary-button" type="submit">Enviar avaliacao</button>
+          <p class="form-feedback" id="surveyFeedback" role="status" aria-live="polite"></p>
+        </form>
+
+        <section class="thank-you" id="thankYou" hidden>
+          <p class="eyebrow">Recebido</p>
+          <h2>Obrigado por compartilhar sua experiencia.</h2>
+          <p>Sua resposta foi registrada com sucesso e sera usada para orientar melhorias nos processos.</p>
+          <a class="ghost-button" href="/">Voltar para a pagina inicial</a>
+        </section>
+      </section>
+    </main>
+
+    <script type="module" src="/survey.js"></script>
+  </body>
+  </html>

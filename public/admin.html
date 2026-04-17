@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Painel | Experiencia Objetiva</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="dashboard-body">
+    <div class="dashboard-shell">
+      <aside class="dashboard-sidebar">
+        <a class="brand-link" href="/">
+          <span class="brand-mark"></span>
+          <div>
+            <p>Experiencia Objetiva</p>
+            <small>Sistema corporativo</small>
+          </div>
+        </a>
+
+        <div class="sidebar-copy">
+          <p class="eyebrow">Objetivo</p>
+          <h1>Gerenciar pontos de coleta e acompanhar a experiencia do cliente.</h1>
+          <p>
+            O painel centraliza criacao de links e QR codes, indicadores por jornada e leitura de comentarios para
+            melhoria continua.
+          </p>
+        </div>
+
+        <div class="sidebar-section">
+          <p class="mono-label">Privacidade</p>
+          <p class="muted-text">A avaliacao sera utilizada exclusivamente para melhoria dos servicos prestados, de forma interna e confidencial.</p>
+        </div>
+      </aside>
+
+      <main class="dashboard-main">
+        <section class="topbar">
+          <div>
+            <p class="eyebrow">Painel gerencial</p>
+            <h2>Visao consolidada da operacao</h2>
+          </div>
+          <div class="topbar-actions">
+            <label class="inline-filter">
+              <span>Filtrar por ponto</span>
+              <select id="pointFilter">
+                <option value="">Todos</option>
+              </select>
+            </label>
+            <a class="ghost-button" id="exportButton" href="/api/dashboard/export.csv">Exportar CSV</a>
+          </div>
+        </section>
+
+        <section class="metrics-row" id="summaryCards"></section>
+
+        <section class="dashboard-grid">
+          <article class="workspace-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Criar ponto de coleta</p>
+                <h3>Novo acesso por unidade, etapa ou canal</h3>
+              </div>
+            </div>
+
+            <form class="point-form" id="pointForm">
+              <label>
+                <span>Titulo do ponto</span>
+                <input type="text" name="title" placeholder="Ex.: Loja Centro - conclusao da venda" required />
+              </label>
+              <label>
+                <span>Unidade</span>
+                <input type="text" name="unitName" placeholder="Ex.: Loja Centro" required />
+              </label>
+              <label>
+                <span>Etapa da jornada</span>
+                <select name="journeyStage" required>
+                  <option value="">Selecione</option>
+                  <option>Atendimento na loja</option>
+                  <option>Conclusao da venda</option>
+                  <option>Entrega do produto</option>
+                  <option>Pos-venda</option>
+                </select>
+              </label>
+              <label>
+                <span>Canal de coleta</span>
+                <select name="channel" required>
+                  <option value="">Selecione</option>
+                  <option>QR Code no caixa</option>
+                  <option>QR Code no balcao</option>
+                  <option>Link via WhatsApp</option>
+                  <option>Link via e-mail</option>
+                  <option>Tablet na loja</option>
+                </select>
+              </label>
+              <label>
+                <span>Area responsavel</span>
+                <select name="responsibleArea" required>
+                  <option value="">Selecione</option>
+                  <option>Atendimento comercial</option>
+                  <option>Operacao de loja</option>
+                  <option>Logistica</option>
+                  <option>Processos administrativos e financeiros</option>
+                  <option>Pos-venda</option>
+                </select>
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" name="deliveryApplicable" />
+                <span>Incluir pergunta especifica de entrega para esse ponto</span>
+              </label>
+              <label class="full-span">
+                <span>Descricao interna</span>
+                <textarea name="description" rows="3" placeholder="Contexto do uso, equipe envolvida ou objetivo da coleta."></textarea>
+              </label>
+              <button class="primary-button" type="submit">Gerar acesso</button>
+              <p class="form-feedback" id="pointFormFeedback" role="status" aria-live="polite"></p>
+            </form>
+          </article>
+
+          <article class="workspace-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Evolucao diaria</p>
+                <h3>Tendencia de respostas e nota media</h3>
+              </div>
+            </div>
+            <div class="trend-chart" id="trendChart"></div>
+          </article>
+        </section>
+
+        <section class="dashboard-grid secondary">
+          <article class="workspace-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Pontos ativos</p>
+                <h3>Links e QR codes em operacao</h3>
+              </div>
+            </div>
+            <div class="points-grid admin-grid" id="pointsList"></div>
+          </article>
+
+          <article class="workspace-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Leituras de apoio</p>
+                <h3>Quebras e comentarios recentes</h3>
+              </div>
+            </div>
+            <div class="breakdowns-grid">
+              <section>
+                <h4>Por etapa da jornada</h4>
+                <div id="breakdownJourney" class="bar-list"></div>
+              </section>
+              <section>
+                <h4>Por canal</h4>
+                <div id="breakdownChannel" class="bar-list"></div>
+              </section>
+              <section>
+                <h4>Por area</h4>
+                <div id="breakdownArea" class="bar-list"></div>
+              </section>
+              <section>
+                <h4>Sinais de notas baixas</h4>
+                <div id="signalsList" class="signal-list"></div>
+              </section>
+            </div>
+            <div class="comments-stack" id="commentsList"></div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/admin.js"></script>
+  </body>
+  </html>

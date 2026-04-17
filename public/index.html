@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Experiencia Objetiva</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="landing-body">
+    <div class="hero-shell">
+      <header class="site-header">
+        <div>
+          <p class="eyebrow">Programa Corporativo</p>
+          <h1>Experiencia Objetiva</h1>
+        </div>
+        <nav class="nav-actions">
+          <a class="ghost-button" href="/gestao">Abrir painel</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="hero-grid">
+          <div class="hero-copy reveal">
+            <p class="hero-tag">Avaliacao continua da experiencia do cliente</p>
+            <h2>Coleta por QR code, link digital e leitura gerencial em uma unica aplicacao.</h2>
+            <p class="hero-text">
+              Estruture a jornada de atendimento, venda, entrega e pos-venda com perguntas padronizadas,
+              comentarios livres, anonimato opcional e armazenamento em banco de dados.
+            </p>
+
+            <div class="hero-actions">
+              <a class="primary-button" href="/gestao">Entrar no painel</a>
+              <a class="ghost-button" href="#recursos">Ver recursos</a>
+            </div>
+          </div>
+
+          <aside class="hero-panel reveal delayed">
+            <div class="metric-stack" id="landingMetrics">
+              <article>
+                <span>Respostas registradas</span>
+                <strong id="metricResponses">--</strong>
+              </article>
+              <article>
+                <span>Media geral</span>
+                <strong id="metricAverage">--</strong>
+              </article>
+              <article>
+                <span>Pontos de coleta</span>
+                <strong id="metricPoints">--</strong>
+              </article>
+            </div>
+            <div class="hero-note">
+              <p class="mono-label">LGPD</p>
+              <p>A avaliacao sera utilizada exclusivamente para melhoria dos servicos prestados, de forma interna e confidencial.</p>
+            </div>
+          </aside>
+        </section>
+
+        <section class="feature-strip reveal" id="recursos">
+          <article>
+            <p class="eyebrow">Coleta</p>
+            <h3>Formulario publico por etapa da jornada</h3>
+            <p>Escala de 1 a 5, dimensoes complementares, comentario opcional e anonimato preferencial.</p>
+          </article>
+          <article>
+            <p class="eyebrow">Distribuicao</p>
+            <h3>QR code e link individual por ponto de contato</h3>
+            <p>Crie acessos para loja, conclusao da venda, entrega ou pos-venda em poucos cliques.</p>
+          </article>
+          <article>
+            <p class="eyebrow">Analise</p>
+            <h3>Painel gerencial com indicadores e sinais de risco</h3>
+            <p>Veja medias, volume, comentarios recentes e concentracao de notas baixas por area.</p>
+          </article>
+        </section>
+
+        <section class="support-grid reveal">
+          <article class="support-panel">
+            <p class="eyebrow">Fluxo recomendado</p>
+            <ol class="ordered-list">
+              <li>Criar pontos de coleta para cada unidade ou etapa da jornada.</li>
+              <li>Distribuir o link ou QR code ao cliente no momento correto.</li>
+              <li>Acompanhar as respostas no painel e priorizar planos de acao.</li>
+            </ol>
+          </article>
+
+          <article class="support-panel">
+            <p class="eyebrow">Cobertura do modelo</p>
+            <ul class="clean-list">
+              <li>Atendimento comercial</li>
+              <li>Operacao de loja</li>
+              <li>Logistica e entrega</li>
+              <li>Processos administrativos e financeiros</li>
+              <li>Pos-venda</li>
+            </ul>
+          </article>
+        </section>
+
+        <section class="active-points reveal">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Acessos ativos</p>
+              <h3>Pontos de coleta ja disponiveis</h3>
+            </div>
+            <a class="ghost-button" href="/gestao">Gerenciar pontos</a>
+          </div>
+          <div class="points-grid" id="landingPoints"></div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+  </html>

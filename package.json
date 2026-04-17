@@ -1,0 +1,18 @@
+{
+  "name": "experiencia-objetiva-app",
+  "version": "1.0.0",
+  "description": "Aplicacao web para coleta e analise da experiencia do cliente do programa Experiencia Objetiva.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "mysql2": "^3.15.2",
+    "qrcode": "^1.5.4"
+  }
+}
