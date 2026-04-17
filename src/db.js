@@ -99,10 +99,20 @@ const pointStatsJoin = `
 `;
 
 export const storageMode = detectDbClient();
+let adapter = null;
+let dbInitError = null;
+const dbReadyPromise = initializeDatabase();
 
-const adapter = await createAdapter(storageMode);
-await adapter.init();
-await seedDefaultPoint();
+async function initializeDatabase() {
+  try {
+    adapter = await createAdapter(storageMode);
+    await adapter.init();
+    await seedDefaultPoint();
+  } catch (error) {
+    dbInitError = error;
+    console.error("[db] initialization failed:", error);
+  }
+}
 
 function detectDbClient() {
   const explicitClient = toNullableText(process.env.DB_CLIENT)?.toLowerCase();
@@ -263,6 +273,28 @@ async function seedDefaultPoint() {
   );
 }
 
+async function ensureAdapter() {
+  await dbReadyPromise;
+
+  if (dbInitError) {
+    throw new Error(`Falha ao inicializar o banco de dados: ${dbInitError.message}`);
+  }
+
+  if (!adapter) {
+    throw new Error("Banco de dados indisponivel.");
+  }
+
+  return adapter;
+}
+
+export function getDatabaseStatus() {
+  return {
+    storageMode,
+    ready: Boolean(adapter) && !dbInitError,
+    error: dbInitError ? dbInitError.message : null,
+  };
+}
+
 function mapPoint(row) {
   if (!row) {
     return null;
@@ -312,7 +344,8 @@ function buildResponseFilter(filters = {}) {
 }
 
 export async function listCollectionPoints() {
-  const rows = await adapter.all(`
+  const db = await ensureAdapter();
+  const rows = await db.all(`
     SELECT
       cp.*,
       COALESCE(response_stats.response_count, 0) AS response_count,
@@ -326,7 +359,8 @@ export async function listCollectionPoints() {
 }
 
 export async function getCollectionPointById(id) {
-  const row = await adapter.get(
+  const db = await ensureAdapter();
+  const row = await db.get(
     `
       SELECT
         cp.*,
@@ -343,7 +377,8 @@ export async function getCollectionPointById(id) {
 }
 
 export async function getCollectionPointBySlug(slug) {
-  const row = await adapter.get(
+  const db = await ensureAdapter();
+  const row = await db.get(
     `
       SELECT
         cp.*,
@@ -360,6 +395,7 @@ export async function getCollectionPointBySlug(slug) {
 }
 
 export async function createCollectionPoint(payload) {
+  const db = await ensureAdapter();
   const title = toNullableText(payload.title);
   const unitName = toNullableText(payload.unitName);
   const journeyStage = toNullableText(payload.journeyStage);
@@ -375,7 +411,7 @@ export async function createCollectionPoint(payload) {
   const now = nowIso();
   const slug = buildSlug([unitName, title, journeyStage]);
 
-  const result = await adapter.run(
+  const result = await db.run(
     `
       INSERT INTO collection_points (
         slug,
@@ -410,6 +446,7 @@ export async function createCollectionPoint(payload) {
 }
 
 export async function saveResponse(slug, payload) {
+  const db = await ensureAdapter();
   const point = await getCollectionPointBySlug(slug);
   if (!point || !point.active) {
     throw new Error("Ponto de coleta nao encontrado ou inativo.");
@@ -441,7 +478,7 @@ export async function saveResponse(slug, payload) {
   const comment = toNullableText(payload.comment);
   const sourceContext = toNullableText(payload.sourceContext) || point.channel;
 
-  const result = await adapter.run(
+  const result = await db.run(
     `
       INSERT INTO responses (
         point_id,
@@ -483,8 +520,9 @@ export async function saveResponse(slug, payload) {
 }
 
 export async function getDashboard(filters = {}) {
+  const db = await ensureAdapter();
   const filter = buildResponseFilter(filters);
-  const summary = await adapter.get(
+  const summary = await db.get(
     `
       SELECT
         COUNT(*) AS total_responses,
@@ -501,7 +539,7 @@ export async function getDashboard(filters = {}) {
     filter.params,
   );
 
-  const trend = await adapter.all(
+  const trend = await db.all(
     `
       SELECT
         substr(r.created_at, 1, 10) AS day,
@@ -517,7 +555,7 @@ export async function getDashboard(filters = {}) {
     filter.params,
   );
 
-  const byJourney = await adapter.all(
+  const byJourney = await db.all(
     `
       SELECT
         cp.journey_stage AS label,
@@ -532,7 +570,7 @@ export async function getDashboard(filters = {}) {
     filter.params,
   );
 
-  const byChannel = await adapter.all(
+  const byChannel = await db.all(
     `
       SELECT
         cp.channel AS label,
@@ -547,7 +585,7 @@ export async function getDashboard(filters = {}) {
     filter.params,
   );
 
-  const byArea = await adapter.all(
+  const byArea = await db.all(
     `
       SELECT
         cp.responsible_area AS label,
@@ -562,7 +600,7 @@ export async function getDashboard(filters = {}) {
     filter.params,
   );
 
-  const comments = await adapter.all(
+  const comments = await db.all(
     `
       SELECT
         r.id,
@@ -580,7 +618,7 @@ export async function getDashboard(filters = {}) {
     filter.params,
   );
 
-  const lowScoreSignals = await adapter.all(
+  const lowScoreSignals = await db.all(
     `
       SELECT
         cp.title,
@@ -647,8 +685,9 @@ export async function getDashboard(filters = {}) {
 }
 
 export async function exportResponsesCsv(filters = {}) {
+  const db = await ensureAdapter();
   const filter = buildResponseFilter(filters);
-  const rows = await adapter.all(
+  const rows = await db.all(
     `
       SELECT
         r.created_at,

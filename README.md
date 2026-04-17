@@ -89,6 +89,18 @@ Fluxo recomendado:
 6. Definir as variaveis de ambiente do MySQL e `PUBLIC_BASE_URL`.
 7. Publicar e, depois, conectar o dominio final.
 
+## Diagnostico rapido de 503
+
+Se o app cair com `503` na Hostinger, confira nesta ordem:
+
+1. `Deployments -> Runtime logs` e `Build logs`.
+2. `Settings & Redeploy -> Environment Variables` para validar `DB_CLIENT=mysql`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` e `PUBLIC_BASE_URL`.
+3. `Databases -> MySQL Databases` para confirmar se o banco e o usuario existem.
+4. `Websites -> Dashboard -> Resources Usage` para ver se CPU, RAM, processos, IO ou inodes atingiram limite.
+5. Abra `/health` no dominio da aplicacao para verificar se o processo subiu e se o banco foi conectado.
+
+Se `/health` responder com `databaseError`, o problema tende a estar na configuracao do MySQL.
+
 ## Estrutura
 
 - `src/server.js`: rotas HTTP, public URL e geracao do QR code

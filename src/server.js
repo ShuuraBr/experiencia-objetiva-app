@@ -1,3 +1,4 @@
+import "dotenv/config";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -12,6 +13,7 @@ import {
   getDashboard,
   listCollectionPoints,
   saveResponse,
+  getDatabaseStatus,
   storageMode,
 } from "./db.js";
 
@@ -41,11 +43,24 @@ function enrichPoint(point, req) {
 }
 
 app.get("/api/config", (_req, res) => {
+  const databaseStatus = getDatabaseStatus();
   res.json({
     appName: "Experiencia Objetiva",
     description: "Sistema corporativo de avaliacao da experiencia do cliente com coleta continua, QR code e indicadores gerenciais.",
     privacyNotice: "A avaliacao sera utilizada exclusivamente para melhoria dos servicos prestados, de forma interna e confidencial.",
     storageMode,
+    databaseReady: databaseStatus.ready,
+    databaseError: databaseStatus.error,
+  });
+});
+
+app.get("/health", (_req, res) => {
+  const databaseStatus = getDatabaseStatus();
+  res.status(databaseStatus.ready ? 200 : 500).json({
+    status: databaseStatus.ready ? "ok" : "degraded",
+    storageMode,
+    databaseReady: databaseStatus.ready,
+    databaseError: databaseStatus.error,
   });
 });
 
@@ -148,6 +163,22 @@ app.get("/gestao", (_req, res) => {
 
 app.get("/avaliar/:slug", (_req, res) => {
   res.sendFile(path.join(publicDir, "survey.html"));
+});
+
+app.use((error, req, res, next) => {
+  console.error(`[server] ${req.method} ${req.originalUrl}`, error);
+
+  if (res.headersSent) {
+    next(error);
+    return;
+  }
+
+  if (req.path.startsWith("/api/") || req.path === "/health") {
+    res.status(500).json({ error: error.message || "Erro interno do servidor." });
+    return;
+  }
+
+  res.status(500).send("Erro interno do servidor.");
 });
 
 export const server = app.listen(port, () => {
