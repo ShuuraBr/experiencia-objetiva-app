@@ -88,25 +88,31 @@ app.post("/api/points", async (req, res) => {
   }
 });
 
-app.get("/api/points/:id/qr", async (req, res) => {
-  const point = await getCollectionPointById(req.params.id);
-  if (!point) {
-    res.status(404).send("Ponto de coleta nao encontrado.");
-    return;
+app.get("/api/points/:id/qr", async (req, res, next) => {
+  try {
+    const point = await getCollectionPointById(req.params.id);
+    if (!point) {
+      res.status(404).send("Ponto de coleta nao encontrado.");
+      return;
+    }
+
+    const svg = await QRCode.toString(`${baseUrl(req)}/avaliar/${point.slug}`, {
+      type: "svg",
+      margin: 2,
+      width: 320,
+      errorCorrectionLevel: "M",
+      color: {
+        dark: "#000928",
+        light: "#F2F5FF",
+      },
+    });
+
+    res.setHeader("Content-Type", "image/svg+xml; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=300");
+    res.send(svg);
+  } catch (error) {
+    next(error);
   }
-
-  const svg = await QRCode.toString(`${baseUrl(req)}/avaliar/${point.slug}`, {
-    type: "svg",
-    margin: 1,
-    width: 320,
-    color: {
-      dark: "#0f172a",
-      light: "#0000",
-    },
-  });
-
-  res.setHeader("Content-Type", "image/svg+xml");
-  res.send(svg);
 });
 
 app.get("/api/public/:slug", async (req, res) => {
