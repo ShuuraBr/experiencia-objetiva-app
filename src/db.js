@@ -320,6 +320,53 @@ function getMySqlConfig() {
   };
 }
 
+/**
+ * Idempotent schema migrations for MySQL.
+ * Each block checks whether a change is needed before applying it,
+ * so the app can be deployed/restarted safely on an existing database.
+ */
+async function runMysqlMigrations(pool) {
+  // Migration 001 — add employee_id to responses (column was introduced after
+  // the initial deploy; existing tables won't have it).
+  const [cols] = await pool.query(
+    `SELECT COLUMN_NAME
+       FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME   = 'responses'
+        AND COLUMN_NAME  = 'employee_id'`,
+  );
+
+  if (cols.length === 0) {
+    console.log("[db] migration 001: adding employee_id column to responses…");
+
+    await pool.query(
+      `ALTER TABLE responses
+         ADD COLUMN employee_id INT NULL AFTER sector_id`,
+    );
+
+    try {
+      await pool.query(
+        `ALTER TABLE responses
+           ADD INDEX idx_responses_employee (employee_id)`,
+      );
+    } catch (e) {
+      if (!e.message.includes("Duplicate key name")) throw e;
+    }
+
+    try {
+      await pool.query(
+        `ALTER TABLE responses
+           ADD CONSTRAINT fk_responses_employee
+             FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE SET NULL`,
+      );
+    } catch (e) {
+      if (!e.message.includes("Duplicate key name") && !e.message.includes("already exists")) throw e;
+    }
+
+    console.log("[db] migration 001: done.");
+  }
+}
+
 async function createMySqlAdapter() {
   const config = getMySqlConfig();
   const pool = mysql.createPool({
@@ -335,6 +382,7 @@ async function createMySqlAdapter() {
       for (const statement of mysqlSchemaStatements) {
         await pool.query(statement);
       }
+      await runMysqlMigrations(pool);
     },
     async all(sql, params = []) {
       const [rows] = await pool.execute(sql, params);
