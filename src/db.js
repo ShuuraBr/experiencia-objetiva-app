@@ -365,6 +365,24 @@ async function runMysqlMigrations(pool) {
 
     console.log("[db] migration 001: done.");
   }
+
+  // Migration 002 — add customer_contact to responses
+  const [cols2] = await pool.query(
+    `SELECT COLUMN_NAME
+       FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME   = 'responses'
+        AND COLUMN_NAME  = 'customer_contact'`,
+  );
+
+  if (cols2.length === 0) {
+    console.log("[db] migration 002: adding customer_contact column to responses…");
+    await pool.query(
+      `ALTER TABLE responses
+         ADD COLUMN customer_contact VARCHAR(255) NULL AFTER customer_name`,
+    );
+    console.log("[db] migration 002: done.");
+  }
 }
 
 async function createMySqlAdapter() {
