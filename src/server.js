@@ -189,8 +189,11 @@ app.get(["/avaliar", "/avaliar/:legacy"], (_req, res) => {
   res.sendFile(path.join(publicDir, "survey.html"));
 });
 
-app.use((error, req, res, _next) => {
+app.use((error, req, res, next) => {
   console.error(`[server] ${req.method} ${req.originalUrl}`, error);
+  if (res.headersSent) {
+    return next(error);
+  }
   res.status(500).json({
     error: "Erro interno ao processar a solicitação.",
     detail: error?.message,

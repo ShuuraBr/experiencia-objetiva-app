@@ -721,7 +721,6 @@ textarea {
 
 .qr-wrap {
   width: 100%;
-  max-width: 180px;
   padding: 12px;
   border-radius: 22px;
   border: 1px dashed rgba(14, 46, 155, 0.16);
