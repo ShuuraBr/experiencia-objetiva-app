@@ -115,35 +115,22 @@ textarea {
   gap: 20px;
 }
 
-.brand-logo-shell {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px 22px;
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.98);
-  border: 1px solid rgba(14, 46, 155, 0.12);
-  box-shadow: 0 16px 36px rgba(0, 9, 40, 0.1);
-}
-
-.header-logo-shell {
-  min-width: min(42vw, 300px);
-}
-
-.sidebar-logo-shell {
-  width: min(100%, 290px);
-  padding: 18px 20px;
-  border-radius: 26px;
-}
-
-.survey-logo-shell {
-  padding: 18px 20px;
-  border-radius: 26px;
-}
-
 .brand-logo {
   width: min(100%, 260px);
   height: auto;
+  display: block;
+}
+
+.header-logo {
+  width: min(42vw, 260px);
+}
+
+.sidebar-logo {
+  width: min(100%, 240px);
+}
+
+.survey-logo {
+  width: min(100%, 260px);
 }
 
 .brand-lockup-copy {
@@ -207,20 +194,12 @@ textarea {
   pointer-events: none;
 }
 
-.hero-brand-card {
-  display: inline-flex;
-  align-self: flex-start;
-  max-width: min(100%, 390px);
-  margin-bottom: 26px;
-  padding: 18px 20px;
-  border-radius: 30px;
-  background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 20px 44px rgba(0, 9, 40, 0.2);
-}
-
 .hero-logo {
-  width: min(100%, 350px);
+  display: block;
+  width: min(100%, 320px);
   height: auto;
+  margin-bottom: 22px;
+  filter: drop-shadow(0 18px 32px rgba(0, 9, 40, 0.28));
 }
 
 .hero-tag,
@@ -515,7 +494,7 @@ textarea {
 
 .dashboard-sidebar .eyebrow,
 .dashboard-sidebar .mono-label {
-  color: #00965e;
+  color: #8bd3b5;
 }
 
 .sidebar-copy {
@@ -935,3 +914,164 @@ textarea {
     max-width: none;
   }
 }
+
+/* New components: sector dropdowns, emoji ratings, employees CRUD, QR panel */
+
+.survey-selectors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.question-list {
+  display: grid;
+  gap: 22px;
+}
+
+.emoji-rating {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.emoji-option {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 12px 4px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(0, 9, 40, 0.12);
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, background-color 160ms ease;
+}
+
+.emoji-option input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.emoji-option .emoji {
+  font-size: 1.9rem;
+  line-height: 1;
+}
+
+.emoji-option .emoji-label {
+  font-size: 0.72rem;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  text-align: center;
+}
+
+.emoji-option:has(input:checked) {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 16px 24px rgba(14, 46, 155, 0.22);
+}
+
+.emoji-option:has(input:checked) .emoji-label {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.qr-panel {
+  display: grid;
+  gap: 18px;
+  justify-items: stretch;
+}
+
+.qr-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  border-radius: 24px;
+  background: #f2f5ff;
+  border: 1px solid rgba(14, 46, 155, 0.14);
+}
+
+.qr-wrap img {
+  width: min(100%, 260px);
+  height: auto;
+}
+
+.qr-wrap.large img {
+  width: min(100%, 280px);
+}
+
+.employees-grid {
+  display: grid;
+  gap: 22px;
+}
+
+.employees-group {
+  display: grid;
+  gap: 12px;
+}
+
+.employees-group h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--accent-strong);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.employees-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.employee-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid var(--line);
+}
+
+.employee-card strong {
+  display: block;
+  font-size: 1rem;
+}
+
+.employee-card p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.85rem;
+}
+
+.employee-card-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-soft);
+}
+
+@media (max-width: 760px) {
+  .survey-selectors {
+    grid-template-columns: 1fr;
+  }
+  .emoji-rating {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .emoji-option {
+    padding: 10px 2px;
+  }
+  .emoji-option .emoji {
+    font-size: 1.6rem;
+  }
+  .emoji-option .emoji-label {
+    font-size: 0.62rem;
+  }
+}
+

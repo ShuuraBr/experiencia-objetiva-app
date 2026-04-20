@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Avaliar atendimento | Experiencia Objetiva</title>
+    <title>Avaliar atendimento | Experiência Objetiva</title>
     <link rel="icon" type="image/png" href="/assets/favicon.png" />
     <link rel="shortcut icon" type="image/png" href="/assets/favicon.png" />
     <link rel="apple-touch-icon" href="/assets/favicon.png" />
@@ -20,87 +20,70 @@
     <main class="survey-shell">
       <section class="survey-hero reveal">
         <div class="survey-brand-block">
-          <span class="brand-logo-shell survey-logo-shell">
-            <img class="brand-logo" src="/assets/objetiva-logo.png" alt="Objetiva Atacadista da Construcao" />
-          </span>
+          <img class="brand-logo survey-logo" src="/assets/objetiva-logo.png" alt="Objetiva Atacadista da Construção" />
           <div>
-            <p class="eyebrow">Avaliacao de experiencia</p>
-            <h1 id="surveyTitle">Como foi sua experiencia na Objetiva?</h1>
-            <p class="survey-meta" id="surveyMeta">Carregando contexto da avaliacao...</p>
+            <p class="eyebrow">Avaliação de experiência</p>
+            <h1>Como foi sua experiência na Objetiva?</h1>
+            <p class="survey-meta">Escolha o setor e o atendente para começar.</p>
           </div>
         </div>
         <div class="survey-note">
           <p class="mono-label">Uso interno</p>
-          <p>A avaliacao sera utilizada exclusivamente para melhoria dos servicos prestados, de forma interna e confidencial.</p>
+          <p>A avaliação é utilizada exclusivamente para melhoria dos serviços prestados, de forma interna e confidencial.</p>
         </div>
       </section>
 
       <section class="survey-card reveal delayed" id="surveyCard">
         <form id="surveyForm" class="survey-form">
-          <div class="question-block">
-            <label>1. Como foi sua experiencia geral na Objetiva?</label>
-            <div class="rating-row" data-field="overallScore"></div>
+          <div class="survey-selectors">
+            <label>
+              <span>Setor atendido</span>
+              <select name="sectorSlug" id="sectorSelect" required>
+                <option value="">Selecione o setor</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Funcionário que atendeu</span>
+              <select name="employeeId" id="employeeSelect" required disabled>
+                <option value="">Selecione o setor primeiro</option>
+              </select>
+            </label>
           </div>
 
-          <div class="question-block">
-            <label>2. Qual foi a qualidade do atendimento recebido?</label>
-            <div class="rating-row" data-field="serviceQuality"></div>
-          </div>
-
-          <div class="question-block">
-            <label>3. As orientacoes foram claras?</label>
-            <div class="rating-row" data-field="guidanceClarity"></div>
-          </div>
-
-          <div class="question-block">
-            <label>4. A solucao apresentada foi adequada para sua necessidade?</label>
-            <div class="rating-row" data-field="solutionFit"></div>
-          </div>
-
-          <div class="question-block">
-            <label>5. Como voce avalia a eficiencia do processo?</label>
-            <div class="rating-row" data-field="operationalEfficiency"></div>
-          </div>
-
-          <div class="question-block" id="deliveryBlock" hidden>
-            <label>6. Como voce avalia a entrega do produto?</label>
-            <div class="rating-row" data-field="deliveryRating"></div>
+          <div class="question-list" id="questionList">
+            <p class="empty-state muted-text">As perguntas do setor aparecerão aqui assim que você selecionar o setor.</p>
           </div>
 
           <label class="full-span">
-            <span>Comentario adicional (opcional)</span>
+            <span>Comentário adicional (opcional)</span>
             <textarea name="comment" rows="4" placeholder="Se desejar, descreva o que funcionou bem ou o que pode melhorar."></textarea>
           </label>
 
-          <label class="checkbox-row">
-            <input type="checkbox" name="anonymous" checked />
-            <span>Enviar avaliacao de forma anonima</span>
-          </label>
-
-          <div class="identity-grid" id="identityFields" hidden>
+          <div class="identity-grid">
             <label>
-              <span>Nome</span>
-              <input type="text" name="customerName" placeholder="Seu nome" />
+              <span>Seu nome</span>
+              <input type="text" name="customerName" placeholder="Como gostaria de ser chamado(a)?" required />
             </label>
             <label>
-              <span>Contato</span>
-              <input type="text" name="contactChannel" placeholder="Telefone, e-mail ou WhatsApp" />
+              <span>Contato (opcional)</span>
+              <input type="text" name="customerContact" placeholder="Telefone, e-mail ou WhatsApp" />
             </label>
           </div>
 
-          <button class="primary-button" type="submit">Enviar avaliacao</button>
+          <button class="primary-button" type="submit" id="submitButton" disabled>Enviar avaliação</button>
           <p class="form-feedback" id="surveyFeedback" role="status" aria-live="polite"></p>
         </form>
 
         <section class="thank-you" id="thankYou" hidden>
           <p class="eyebrow">Recebido</p>
-          <h2>Obrigado por compartilhar sua experiencia.</h2>
-          <p>Sua resposta foi registrada com sucesso e sera usada para orientar melhorias nos processos.</p>
-          <a class="ghost-button" href="/">Voltar para a pagina inicial</a>
+          <h2>Obrigado por compartilhar sua experiência.</h2>
+          <p id="thankYouDetail">Sua resposta foi registrada com sucesso e será usada para orientar melhorias nos processos.</p>
+          <a class="ghost-button" href="/">Voltar para a página inicial</a>
         </section>
       </section>
     </main>
 
     <script type="module" src="/survey.js"></script>
   </body>
-  </html>
+</html>

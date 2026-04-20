@@ -1,49 +1,48 @@
-const pointsContainer = document.querySelector("#landingPoints");
+const sectorsContainer = document.querySelector("#landingSectors");
 const metricResponses = document.querySelector("#metricResponses");
 const metricAverage = document.querySelector("#metricAverage");
-const metricPoints = document.querySelector("#metricPoints");
+const metricSectors = document.querySelector("#metricSectors");
 
 boot();
 
 async function boot() {
   try {
-    const [{ points }, { dashboard }] = await Promise.all([
-      fetchJson("/api/points"),
+    const [{ sectors }, { dashboard }] = await Promise.all([
+      fetchJson("/api/sectors"),
       fetchJson("/api/dashboard"),
     ]);
 
     metricResponses.textContent = dashboard.summary.totalResponses || "0";
     metricAverage.textContent = dashboard.summary.averageOverall ? `${dashboard.summary.averageOverall}/5` : "--";
-    metricPoints.textContent = String(points.length);
+    metricSectors.textContent = String(sectors.length);
 
-    renderPoints(points);
+    renderSectors(sectors);
   } catch (error) {
     metricResponses.textContent = "--";
     metricAverage.textContent = "--";
-    metricPoints.textContent = "--";
-    pointsContainer.innerHTML = `<p class="empty-state">Nao foi possivel carregar os pontos de coleta agora.</p>`;
+    metricSectors.textContent = "--";
+    sectorsContainer.innerHTML = `<p class="empty-state">Não foi possível carregar os setores agora.</p>`;
   }
 }
 
-function renderPoints(points) {
-  if (!points.length) {
-    pointsContainer.innerHTML = `<p class="empty-state">Nenhum ponto ativo ainda. Crie o primeiro acesso no painel administrativo.</p>`;
+function renderSectors(sectors) {
+  if (!sectors.length) {
+    sectorsContainer.innerHTML = `<p class="empty-state">Nenhum setor ativo. Configure no painel administrativo.</p>`;
     return;
   }
 
-  pointsContainer.innerHTML = points
-    .slice(0, 3)
+  sectorsContainer.innerHTML = sectors
     .map(
-      (point) => `
+      (sector) => `
         <article class="point-card">
           <div>
-            <p class="eyebrow">${point.unitName}</p>
-            <h4>${point.title}</h4>
-            <p>${point.journeyStage} • ${point.channel}</p>
+            <p class="eyebrow">${escapeHtml(sector.name)}</p>
+            <h4>${sector.employeeCount} funcionário(s)</h4>
+            <p>${sector.responseCount} resposta(s) coletadas</p>
           </div>
           <div class="point-card-footer">
-            <span>${point.responseCount} resposta(s)</span>
-            <a class="inline-link" href="${point.accessUrl}">Abrir avaliacao</a>
+            <span>${sector.averageScore ? `${sector.averageScore}/5` : "Sem média ainda"}</span>
+            <a class="inline-link" href="/avaliar">Avaliar</a>
           </div>
         </article>
       `,
@@ -51,10 +50,22 @@ function renderPoints(points) {
     .join("");
 }
 
+function escapeHtml(value) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 async function fetchJson(url, options = {}) {
   const response = await fetch(url, options);
   if (!response.ok) {
-    throw new Error("Falha na requisicao.");
+    throw new Error("Falha na requisição.");
   }
   return response.json();
 }
