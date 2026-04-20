@@ -383,6 +383,27 @@ async function runMysqlMigrations(pool) {
     );
     console.log("[db] migration 002: done.");
   }
+
+  // Migration 003 — ensure point_id on responses is nullable.
+  // The column exists in the live DB (referencing collection_points) but the
+  // current codebase never populates it, so every INSERT was failing with a
+  // FK constraint error. Making it nullable lets inserts proceed without a value.
+  const [pointCol] = await pool.query(
+    `SELECT IS_NULLABLE
+       FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME   = 'responses'
+        AND COLUMN_NAME  = 'point_id'`,
+  );
+
+  if (pointCol.length > 0 && pointCol[0].IS_NULLABLE === "NO") {
+    console.log("[db] migration 003: making point_id nullable on responses...");
+    await pool.query(
+      `ALTER TABLE responses
+         MODIFY COLUMN point_id INT NULL`,
+    );
+    console.log("[db] migration 003: done.");
+  }
 }
 
 async function createMySqlAdapter() {
