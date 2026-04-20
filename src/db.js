@@ -487,15 +487,15 @@ export async function listSectors() {
       response_stats.average_score
     FROM sectors s
     LEFT JOIN (
-      SELECT e.sector_id, COUNT(*) AS employee_count 
-      FROM employees e 
-      WHERE e.active = 1 
-      GROUP BY e.sector_id
+      SELECT sector_id, COUNT(*) AS employee_count 
+      FROM employees 
+      WHERE active = 1 
+      GROUP BY sector_id
     ) employee_counts ON employee_counts.sector_id = s.id
     LEFT JOIN (
-      SELECT r.sector_id, COUNT(*) AS response_count, ROUND(AVG(r.overall_score), 2) AS average_score
-      FROM responses r 
-      GROUP BY r.sector_id
+      SELECT sector_id, COUNT(*) AS response_count, ROUND(AVG(overall_score), 2) AS average_score
+      FROM responses 
+      GROUP BY sector_id
     ) response_stats ON response_stats.sector_id = s.id
     WHERE s.active = 1
     ORDER BY s.sort_order ASC, s.name ASC
@@ -552,10 +552,10 @@ export async function listEmployees({ sectorId } = {}) {
       FROM employees e
       JOIN sectors s ON s.id = e.sector_id
       LEFT JOIN (
-        SELECT r_sub.employee_id, COUNT(*) AS response_count, ROUND(AVG(r_sub.overall_score), 2) AS average_score
-        FROM responses r_sub 
-        WHERE r_sub.employee_id IS NOT NULL 
-        GROUP BY r_sub.employee_id
+        SELECT employee_id, COUNT(*) AS response_count, ROUND(AVG(overall_score), 2) AS average_score
+        FROM responses 
+        WHERE employee_id IS NOT NULL 
+        GROUP BY employee_id
       ) emp_stats ON emp_stats.employee_id = e.id
       WHERE ${clauses.join(" AND ")}
       ORDER BY s.sort_order ASC, e.name ASC`,
@@ -604,10 +604,10 @@ export async function getEmployeeById(id) {
       FROM employees e
       JOIN sectors s ON s.id = e.sector_id
       LEFT JOIN (
-        SELECT r_sub.employee_id, COUNT(*) AS response_count, ROUND(AVG(r_sub.overall_score), 2) AS average_score
-        FROM responses r_sub 
-        WHERE r_sub.employee_id IS NOT NULL 
-        GROUP BY r_sub.employee_id
+        SELECT employee_id, COUNT(*) AS response_count, ROUND(AVG(overall_score), 2) AS average_score
+        FROM responses 
+        WHERE employee_id IS NOT NULL 
+        GROUP BY employee_id
       ) emp_stats ON emp_stats.employee_id = e.id
       WHERE e.id = ?`,
     [Number(id)],
