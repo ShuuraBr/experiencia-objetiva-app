@@ -4,99 +4,219 @@ import { fileURLToPath } from "node:url";
 
 import mysql from "mysql2/promise";
 
-import { buildSlug, escapeCsv, formatAverage, nowIso, toBoolean, toNullableText } from "./utils.js";
+import { escapeCsv, formatAverage, nowIso, slugify, toNullableText } from "./utils.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const sqlitePath = path.resolve(__dirname, "../data/experiencia-objetiva.sqlite");
 
+const SECTOR_SEED = [
+  {
+    slug: "vendas",
+    name: "Vendas",
+    sortOrder: 1,
+    questions: [
+      { text: "O atendente demonstrou conhecimento sobre os produtos/serviços?", reverse: false },
+      { text: "Você se sentiu bem orientado(a) durante a compra?", reverse: false },
+      { text: "O tempo de atendimento foi adequado?", reverse: false },
+      { text: "O atendente entendeu sua necessidade rapidamente?", reverse: false },
+      { text: "Foram apresentadas opções adequadas ao que você buscava?", reverse: false },
+      { text: "Houve pressão excessiva para fechar a venda?", reverse: true },
+    ],
+  },
+  {
+    slug: "caixa",
+    name: "Caixa",
+    sortOrder: 2,
+    questions: [
+      { text: "O processo de pagamento foi rápido e sem erros?", reverse: false },
+      { text: "O atendente foi cordial e educado?", reverse: false },
+      { text: "Houve clareza nas informações (valores, troco, comprovante)?", reverse: false },
+      { text: "O sistema apresentou falhas durante o atendimento?", reverse: true },
+      { text: "O tempo na fila foi aceitável?", reverse: false },
+      { text: "Você recebeu corretamente o comprovante da transação?", reverse: false },
+    ],
+  },
+  {
+    slug: "retira-interna",
+    name: "Retira Interna",
+    sortOrder: 3,
+    questions: [
+      { text: "Seu pedido estava separado corretamente?", reverse: false },
+      { text: "O tempo de espera para retirada foi satisfatório?", reverse: false },
+      { text: "O atendimento foi organizado e ágil?", reverse: false },
+      { text: "Houve conferência dos itens no momento da retirada?", reverse: false },
+      { text: "O local de retirada estava bem sinalizado?", reverse: false },
+      { text: "Os colaboradores demonstraram atenção durante o atendimento?", reverse: false },
+    ],
+  },
+  {
+    slug: "retira-externa",
+    name: "Retira Externa",
+    sortOrder: 4,
+    questions: [
+      { text: "O atendimento foi rápido no ponto de retirada?", reverse: false },
+      { text: "Houve facilidade para localizar e receber o pedido?", reverse: false },
+      { text: "Os colaboradores foram prestativos durante a entrega?", reverse: false },
+      { text: "O processo foi bem orientado (ex: onde parar, como retirar)?", reverse: false },
+      { text: "Houve organização na fila ou ordem de atendimento?", reverse: false },
+      { text: "O pedido foi entregue corretamente e sem avarias?", reverse: false },
+    ],
+  },
+  {
+    slug: "entrega",
+    name: "Entrega",
+    sortOrder: 5,
+    questions: [
+      { text: "O prazo de entrega foi cumprido?", reverse: false },
+      { text: "O produto chegou em boas condições?", reverse: false },
+      { text: "O entregador foi educado e profissional?", reverse: false },
+      { text: "Você recebeu atualizações sobre o status da entrega?", reverse: false },
+      { text: "Houve facilidade para contato em caso de problema?", reverse: false },
+      { text: "A entrega ocorreu conforme combinado (horário/local)?", reverse: false },
+    ],
+  },
+  {
+    slug: "administrativo",
+    name: "Administrativo",
+    sortOrder: 6,
+    questions: [
+      { text: "Suas solicitações foram resolvidas com eficiência?", reverse: false },
+      { text: "O atendimento foi claro e objetivo?", reverse: false },
+      { text: "O tempo de resposta foi satisfatório?", reverse: false },
+      { text: "Houve retorno dentro do prazo informado?", reverse: false },
+      { text: "O atendimento demonstrou profissionalismo?", reverse: false },
+      { text: "Seu problema foi resolvido na primeira interação?", reverse: false },
+    ],
+  },
+];
+
 const sqliteSchema = `
   PRAGMA journal_mode = WAL;
   PRAGMA foreign_keys = ON;
 
-  CREATE TABLE IF NOT EXISTS collection_points (
+  CREATE TABLE IF NOT EXISTS sectors (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     slug TEXT NOT NULL UNIQUE,
-    title TEXT NOT NULL,
-    unit_name TEXT NOT NULL,
-    journey_stage TEXT NOT NULL,
-    channel TEXT NOT NULL,
-    responsible_area TEXT NOT NULL,
-    delivery_applicable INTEGER NOT NULL DEFAULT 0,
+    name TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
     active INTEGER NOT NULL DEFAULT 1,
-    description TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS sector_questions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sector_id INTEGER NOT NULL REFERENCES sectors(id) ON DELETE CASCADE,
+    position INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    is_reverse INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    UNIQUE(sector_id, position)
+  );
+
+  CREATE TABLE IF NOT EXISTS employees (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sector_id INTEGER NOT NULL REFERENCES sectors(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    role TEXT,
+    active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
 
   CREATE TABLE IF NOT EXISTS responses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    point_id INTEGER NOT NULL REFERENCES collection_points(id) ON DELETE CASCADE,
-    overall_score INTEGER NOT NULL CHECK (overall_score BETWEEN 1 AND 5),
-    service_quality INTEGER NOT NULL CHECK (service_quality BETWEEN 1 AND 5),
-    guidance_clarity INTEGER NOT NULL CHECK (guidance_clarity BETWEEN 1 AND 5),
-    solution_fit INTEGER NOT NULL CHECK (solution_fit BETWEEN 1 AND 5),
-    operational_efficiency INTEGER NOT NULL CHECK (operational_efficiency BETWEEN 1 AND 5),
-    delivery_rating INTEGER CHECK (delivery_rating BETWEEN 1 AND 5),
-    anonymous INTEGER NOT NULL DEFAULT 1,
-    customer_name TEXT,
-    contact_channel TEXT,
+    sector_id INTEGER NOT NULL REFERENCES sectors(id) ON DELETE RESTRICT,
+    employee_id INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+    customer_name TEXT NOT NULL,
+    customer_contact TEXT,
     comment TEXT,
-    source_context TEXT,
+    overall_score REAL,
     created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS response_answers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    response_id INTEGER NOT NULL REFERENCES responses(id) ON DELETE CASCADE,
+    question_id INTEGER NOT NULL REFERENCES sector_questions(id) ON DELETE CASCADE,
+    score INTEGER NOT NULL CHECK (score BETWEEN 1 AND 5)
   );
 `;
 
 const mysqlSchemaStatements = [
   `
-    CREATE TABLE IF NOT EXISTS collection_points (
+    CREATE TABLE IF NOT EXISTS sectors (
       id INT AUTO_INCREMENT PRIMARY KEY,
-      slug VARCHAR(255) NOT NULL UNIQUE,
-      title VARCHAR(255) NOT NULL,
-      unit_name VARCHAR(255) NOT NULL,
-      journey_stage VARCHAR(255) NOT NULL,
-      channel VARCHAR(255) NOT NULL,
-      responsible_area VARCHAR(255) NOT NULL,
-      delivery_applicable TINYINT(1) NOT NULL DEFAULT 0,
+      slug VARCHAR(120) NOT NULL UNIQUE,
+      name VARCHAR(160) NOT NULL,
+      sort_order INT NOT NULL DEFAULT 0,
       active TINYINT(1) NOT NULL DEFAULT 1,
-      description TEXT NULL,
       created_at VARCHAR(30) NOT NULL,
       updated_at VARCHAR(30) NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `,
   `
+    CREATE TABLE IF NOT EXISTS sector_questions (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      sector_id INT NOT NULL,
+      position INT NOT NULL,
+      text VARCHAR(500) NOT NULL,
+      is_reverse TINYINT(1) NOT NULL DEFAULT 0,
+      created_at VARCHAR(30) NOT NULL,
+      UNIQUE KEY uniq_sector_position (sector_id, position),
+      CONSTRAINT fk_sector_questions_sector
+        FOREIGN KEY (sector_id) REFERENCES sectors(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `,
+  `
+    CREATE TABLE IF NOT EXISTS employees (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      sector_id INT NOT NULL,
+      name VARCHAR(180) NOT NULL,
+      role VARCHAR(180) NULL,
+      active TINYINT(1) NOT NULL DEFAULT 1,
+      created_at VARCHAR(30) NOT NULL,
+      updated_at VARCHAR(30) NOT NULL,
+      INDEX idx_employees_sector (sector_id),
+      CONSTRAINT fk_employees_sector
+        FOREIGN KEY (sector_id) REFERENCES sectors(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `,
+  `
     CREATE TABLE IF NOT EXISTS responses (
       id INT AUTO_INCREMENT PRIMARY KEY,
-      point_id INT NOT NULL,
-      overall_score TINYINT NOT NULL,
-      service_quality TINYINT NOT NULL,
-      guidance_clarity TINYINT NOT NULL,
-      solution_fit TINYINT NOT NULL,
-      operational_efficiency TINYINT NOT NULL,
-      delivery_rating TINYINT NULL,
-      anonymous TINYINT(1) NOT NULL DEFAULT 1,
-      customer_name VARCHAR(255) NULL,
-      contact_channel VARCHAR(255) NULL,
+      sector_id INT NOT NULL,
+      employee_id INT NULL,
+      customer_name VARCHAR(255) NOT NULL,
+      customer_contact VARCHAR(255) NULL,
       comment TEXT NULL,
-      source_context VARCHAR(255) NULL,
+      overall_score DECIMAL(4,2) NULL,
       created_at VARCHAR(30) NOT NULL,
-      INDEX idx_responses_point_id (point_id),
-      CONSTRAINT fk_responses_point
-        FOREIGN KEY (point_id) REFERENCES collection_points(id) ON DELETE CASCADE
+      INDEX idx_responses_sector (sector_id),
+      INDEX idx_responses_employee (employee_id),
+      INDEX idx_responses_created (created_at),
+      CONSTRAINT fk_responses_sector
+        FOREIGN KEY (sector_id) REFERENCES sectors(id) ON DELETE RESTRICT,
+      CONSTRAINT fk_responses_employee
+        FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `,
+  `
+    CREATE TABLE IF NOT EXISTS response_answers (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      response_id INT NOT NULL,
+      question_id INT NOT NULL,
+      score TINYINT NOT NULL,
+      INDEX idx_response_answers_response (response_id),
+      INDEX idx_response_answers_question (question_id),
+      CONSTRAINT fk_response_answers_response
+        FOREIGN KEY (response_id) REFERENCES responses(id) ON DELETE CASCADE,
+      CONSTRAINT fk_response_answers_question
+        FOREIGN KEY (question_id) REFERENCES sector_questions(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `,
 ];
-
-const pointStatsJoin = `
-  LEFT JOIN (
-    SELECT
-      point_id,
-      COUNT(*) AS response_count,
-      ROUND(AVG(overall_score), 2) AS average_score
-    FROM responses
-    GROUP BY point_id
-  ) response_stats ON response_stats.point_id = cp.id
-`;
 
 export const storageMode = detectDbClient();
 let adapter = null;
@@ -107,7 +227,7 @@ async function initializeDatabase() {
   try {
     adapter = await createAdapter(storageMode);
     await adapter.init();
-    await seedDefaultPoint();
+    await seedSectorsAndQuestions();
   } catch (error) {
     dbInitError = error;
     console.error("[db] initialization failed:", error);
@@ -234,43 +354,47 @@ async function createMySqlAdapter() {
   };
 }
 
-async function seedDefaultPoint() {
-  const existing = await adapter.get("SELECT COUNT(*) AS total FROM collection_points");
-  if (Number(existing?.total ?? 0) > 0) {
-    return;
-  }
-
+async function seedSectorsAndQuestions() {
   const now = nowIso();
-  await adapter.run(
-    `
-      INSERT INTO collection_points (
-        slug,
-        title,
-        unit_name,
-        journey_stage,
-        channel,
-        responsible_area,
-        delivery_applicable,
-        active,
-        description,
-        created_at,
-        updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-    [
-      "piloto-atendimento-loja",
-      "Piloto Loja - Atendimento comercial",
-      "Unidade piloto",
-      "Atendimento na loja",
-      "QR Code no caixa",
-      "Atendimento comercial",
-      0,
-      1,
-      "Ponto inicial para validar a experiencia logo apos o atendimento presencial.",
-      now,
-      now,
-    ],
-  );
+
+  for (const seed of SECTOR_SEED) {
+    let sector = await adapter.get("SELECT id FROM sectors WHERE slug = ?", [seed.slug]);
+
+    if (!sector) {
+      const result = await adapter.run(
+        `INSERT INTO sectors (slug, name, sort_order, active, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [seed.slug, seed.name, seed.sortOrder, 1, now, now],
+      );
+      sector = { id: result.lastInsertId };
+    } else {
+      await adapter.run(
+        `UPDATE sectors SET name = ?, sort_order = ?, updated_at = ? WHERE id = ?`,
+        [seed.name, seed.sortOrder, now, sector.id],
+      );
+    }
+
+    for (let index = 0; index < seed.questions.length; index += 1) {
+      const question = seed.questions[index];
+      const position = index + 1;
+      const existing = await adapter.get(
+        "SELECT id FROM sector_questions WHERE sector_id = ? AND position = ?",
+        [sector.id, position],
+      );
+      if (existing) {
+        await adapter.run(
+          `UPDATE sector_questions SET text = ?, is_reverse = ? WHERE id = ?`,
+          [question.text, question.reverse ? 1 : 0, existing.id],
+        );
+      } else {
+        await adapter.run(
+          `INSERT INTO sector_questions (sector_id, position, text, is_reverse, created_at)
+           VALUES (?, ?, ?, ?, ?)`,
+          [sector.id, position, question.text, question.reverse ? 1 : 0, now],
+        );
+      }
+    }
+  }
 }
 
 async function ensureAdapter() {
@@ -295,7 +419,7 @@ export function getDatabaseStatus() {
   };
 }
 
-function mapPoint(row) {
+function mapSector(row, extras = {}) {
   if (!row) {
     return null;
   }
@@ -303,18 +427,287 @@ function mapPoint(row) {
   return {
     id: Number(row.id),
     slug: row.slug,
-    title: row.title,
-    unitName: row.unit_name,
-    journeyStage: row.journey_stage,
-    channel: row.channel,
-    responsibleArea: row.responsible_area,
-    deliveryApplicable: Boolean(Number(row.delivery_applicable)),
-    active: Boolean(Number(row.active)),
-    description: row.description,
+    name: row.name,
+    sortOrder: Number(row.sort_order ?? 0),
+    active: Boolean(Number(row.active ?? 1)),
     responseCount: Number(row.response_count ?? 0),
-    averageScore: row.average_score === null || row.average_score === undefined ? null : Number(row.average_score),
+    employeeCount: Number(row.employee_count ?? 0),
+    averageScore:
+      row.average_score === null || row.average_score === undefined
+        ? null
+        : Number(row.average_score),
+    ...extras,
+  };
+}
+
+function mapQuestion(row) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: Number(row.id),
+    sectorId: Number(row.sector_id),
+    position: Number(row.position),
+    text: row.text,
+    isReverse: Boolean(Number(row.is_reverse ?? 0)),
+  };
+}
+
+function mapEmployee(row) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: Number(row.id),
+    sectorId: Number(row.sector_id),
+    sectorName: row.sector_name,
+    sectorSlug: row.sector_slug,
+    name: row.name,
+    role: row.role,
+    active: Boolean(Number(row.active ?? 1)),
+    responseCount: Number(row.response_count ?? 0),
+    averageScore:
+      row.average_score === null || row.average_score === undefined
+        ? null
+        : Number(row.average_score),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+export async function listSectors() {
+  const db = await ensureAdapter();
+  const rows = await db.all(`
+    SELECT
+      s.*,
+      COALESCE(employee_counts.employee_count, 0) AS employee_count,
+      COALESCE(response_stats.response_count, 0) AS response_count,
+      response_stats.average_score
+    FROM sectors s
+    LEFT JOIN (
+      SELECT sector_id, COUNT(*) AS employee_count FROM employees WHERE active = 1 GROUP BY sector_id
+    ) employee_counts ON employee_counts.sector_id = s.id
+    LEFT JOIN (
+      SELECT sector_id, COUNT(*) AS response_count, ROUND(AVG(overall_score), 2) AS average_score
+      FROM responses GROUP BY sector_id
+    ) response_stats ON response_stats.sector_id = s.id
+    WHERE s.active = 1
+    ORDER BY s.sort_order ASC, s.name ASC
+  `);
+  return rows.map((row) => mapSector(row));
+}
+
+export async function getSectorWithDetails(slug) {
+  const db = await ensureAdapter();
+  const sectorRow = await db.get(
+    `SELECT * FROM sectors WHERE slug = ? AND active = 1`,
+    [slug],
+  );
+  if (!sectorRow) {
+    return null;
+  }
+
+  const questions = await db.all(
+    `SELECT * FROM sector_questions WHERE sector_id = ? ORDER BY position ASC`,
+    [sectorRow.id],
+  );
+
+  const employees = await db.all(
+    `SELECT e.*, s.name AS sector_name, s.slug AS sector_slug
+     FROM employees e JOIN sectors s ON s.id = e.sector_id
+     WHERE e.sector_id = ? AND e.active = 1
+     ORDER BY e.name ASC`,
+    [sectorRow.id],
+  );
+
+  return {
+    ...mapSector(sectorRow),
+    questions: questions.map(mapQuestion),
+    employees: employees.map(mapEmployee),
+  };
+}
+
+export async function listEmployees({ sectorId } = {}) {
+  const db = await ensureAdapter();
+  const clauses = ["e.active = 1"];
+  const params = [];
+  if (sectorId) {
+    clauses.push("e.sector_id = ?");
+    params.push(Number(sectorId));
+  }
+
+  const rows = await db.all(
+    `SELECT
+        e.*,
+        s.name AS sector_name,
+        s.slug AS sector_slug,
+        COALESCE(emp_stats.response_count, 0) AS response_count,
+        emp_stats.average_score
+      FROM employees e
+      JOIN sectors s ON s.id = e.sector_id
+      LEFT JOIN (
+        SELECT employee_id, COUNT(*) AS response_count, ROUND(AVG(overall_score), 2) AS average_score
+        FROM responses WHERE employee_id IS NOT NULL GROUP BY employee_id
+      ) emp_stats ON emp_stats.employee_id = e.id
+      WHERE ${clauses.join(" AND ")}
+      ORDER BY s.sort_order ASC, e.name ASC`,
+    params,
+  );
+  return rows.map(mapEmployee);
+}
+
+export async function createEmployee(payload) {
+  const db = await ensureAdapter();
+  const name = toNullableText(payload.name);
+  const sectorId = Number(payload.sectorId);
+  const role = toNullableText(payload.role);
+
+  if (!name) {
+    throw new Error("Informe o nome do funcionário.");
+  }
+  if (!Number.isInteger(sectorId) || sectorId <= 0) {
+    throw new Error("Informe um setor válido.");
+  }
+
+  const sector = await db.get(`SELECT id FROM sectors WHERE id = ? AND active = 1`, [sectorId]);
+  if (!sector) {
+    throw new Error("Setor não encontrado.");
+  }
+
+  const now = nowIso();
+  const result = await db.run(
+    `INSERT INTO employees (sector_id, name, role, active, created_at, updated_at)
+     VALUES (?, ?, ?, 1, ?, ?)`,
+    [sectorId, name, role, now, now],
+  );
+
+  return getEmployeeById(result.lastInsertId);
+}
+
+export async function getEmployeeById(id) {
+  const db = await ensureAdapter();
+  const row = await db.get(
+    `SELECT
+        e.*,
+        s.name AS sector_name,
+        s.slug AS sector_slug,
+        COALESCE(emp_stats.response_count, 0) AS response_count,
+        emp_stats.average_score
+      FROM employees e
+      JOIN sectors s ON s.id = e.sector_id
+      LEFT JOIN (
+        SELECT employee_id, COUNT(*) AS response_count, ROUND(AVG(overall_score), 2) AS average_score
+        FROM responses WHERE employee_id IS NOT NULL GROUP BY employee_id
+      ) emp_stats ON emp_stats.employee_id = e.id
+      WHERE e.id = ?`,
+    [Number(id)],
+  );
+  return mapEmployee(row);
+}
+
+export async function deactivateEmployee(id) {
+  const db = await ensureAdapter();
+  const now = nowIso();
+  await db.run(
+    `UPDATE employees SET active = 0, updated_at = ? WHERE id = ?`,
+    [now, Number(id)],
+  );
+}
+
+export async function saveResponse(payload) {
+  const db = await ensureAdapter();
+
+  const sectorSlug = toNullableText(payload.sectorSlug);
+  if (!sectorSlug) {
+    throw new Error("Selecione o setor avaliado.");
+  }
+
+  const sector = await db.get(
+    `SELECT * FROM sectors WHERE slug = ? AND active = 1`,
+    [sectorSlug],
+  );
+  if (!sector) {
+    throw new Error("Setor não encontrado.");
+  }
+
+  const employeeId = payload.employeeId ? Number(payload.employeeId) : null;
+  if (!employeeId || !Number.isInteger(employeeId) || employeeId <= 0) {
+    throw new Error("Selecione o funcionário avaliado.");
+  }
+
+  const employee = await db.get(
+    `SELECT * FROM employees WHERE id = ? AND sector_id = ? AND active = 1`,
+    [employeeId, sector.id],
+  );
+  if (!employee) {
+    throw new Error("Funcionário não encontrado para este setor.");
+  }
+
+  const customerName = toNullableText(payload.customerName);
+  if (!customerName) {
+    throw new Error("Informe seu nome para enviar a avaliação.");
+  }
+
+  const customerContact = toNullableText(payload.customerContact);
+  const comment = toNullableText(payload.comment);
+
+  const questions = await db.all(
+    `SELECT * FROM sector_questions WHERE sector_id = ? ORDER BY position ASC`,
+    [sector.id],
+  );
+
+  if (!Array.isArray(payload.answers) || payload.answers.length === 0) {
+    throw new Error("Responda todas as perguntas do setor.");
+  }
+
+  const answersByQuestion = new Map();
+  for (const answer of payload.answers) {
+    const questionId = Number(answer.questionId);
+    const score = Number(answer.score);
+    if (!Number.isInteger(questionId) || !Number.isInteger(score) || score < 1 || score > 5) {
+      throw new Error("Respostas inválidas.");
+    }
+    answersByQuestion.set(questionId, score);
+  }
+
+  for (const question of questions) {
+    if (!answersByQuestion.has(Number(question.id))) {
+      throw new Error(`Responda todas as perguntas do setor ${sector.name}.`);
+    }
+  }
+
+  const now = nowIso();
+  const normalizedScores = questions.map((question) => {
+    const raw = answersByQuestion.get(Number(question.id));
+    return Number(question.is_reverse) === 1 ? 6 - raw : raw;
+  });
+  const overallScore = Number(
+    (normalizedScores.reduce((sum, score) => sum + score, 0) / normalizedScores.length).toFixed(2),
+  );
+
+  const result = await db.run(
+    `INSERT INTO responses (sector_id, employee_id, customer_name, customer_contact, comment, overall_score, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [sector.id, employee.id, customerName, customerContact, comment, overallScore, now],
+  );
+
+  const responseId = result.lastInsertId;
+  for (const question of questions) {
+    await db.run(
+      `INSERT INTO response_answers (response_id, question_id, score) VALUES (?, ?, ?)`,
+      [responseId, question.id, answersByQuestion.get(Number(question.id))],
+    );
+  }
+
+  return {
+    id: responseId,
+    sectorId: sector.id,
+    sectorName: sector.name,
+    employeeId: employee.id,
+    employeeName: employee.name,
+    overallScore,
   };
 }
 
@@ -322,9 +715,14 @@ function buildResponseFilter(filters = {}) {
   const clauses = [];
   const params = [];
 
-  if (filters.pointId) {
-    clauses.push("r.point_id = ?");
-    params.push(Number(filters.pointId));
+  if (filters.sectorId) {
+    clauses.push("r.sector_id = ?");
+    params.push(Number(filters.sectorId));
+  }
+
+  if (filters.employeeId) {
+    clauses.push("r.employee_id = ?");
+    params.push(Number(filters.employeeId));
   }
 
   if (filters.startDate) {
@@ -343,294 +741,96 @@ function buildResponseFilter(filters = {}) {
   };
 }
 
-export async function listCollectionPoints() {
-  const db = await ensureAdapter();
-  const rows = await db.all(`
-    SELECT
-      cp.*,
-      COALESCE(response_stats.response_count, 0) AS response_count,
-      response_stats.average_score
-    FROM collection_points cp
-    ${pointStatsJoin}
-    ORDER BY cp.active DESC, cp.created_at DESC
-  `);
-
-  return rows.map(mapPoint);
-}
-
-export async function getCollectionPointById(id) {
-  const db = await ensureAdapter();
-  const row = await db.get(
-    `
-      SELECT
-        cp.*,
-        COALESCE(response_stats.response_count, 0) AS response_count,
-        response_stats.average_score
-      FROM collection_points cp
-      ${pointStatsJoin}
-      WHERE cp.id = ?
-    `,
-    [Number(id)],
-  );
-
-  return mapPoint(row);
-}
-
-export async function getCollectionPointBySlug(slug) {
-  const db = await ensureAdapter();
-  const row = await db.get(
-    `
-      SELECT
-        cp.*,
-        COALESCE(response_stats.response_count, 0) AS response_count,
-        response_stats.average_score
-      FROM collection_points cp
-      ${pointStatsJoin}
-      WHERE cp.slug = ?
-    `,
-    [slug],
-  );
-
-  return mapPoint(row);
-}
-
-export async function createCollectionPoint(payload) {
-  const db = await ensureAdapter();
-  const title = toNullableText(payload.title);
-  const unitName = toNullableText(payload.unitName);
-  const journeyStage = toNullableText(payload.journeyStage);
-  const channel = toNullableText(payload.channel);
-  const responsibleArea = toNullableText(payload.responsibleArea);
-
-  if (!title || !unitName || !journeyStage || !channel || !responsibleArea) {
-    throw new Error("Preencha titulo, unidade, etapa da jornada, canal e area responsavel.");
-  }
-
-  const deliveryApplicable = toBoolean(payload.deliveryApplicable);
-  const description = toNullableText(payload.description);
-  const now = nowIso();
-  const slug = buildSlug([unitName, title, journeyStage]);
-
-  const result = await db.run(
-    `
-      INSERT INTO collection_points (
-        slug,
-        title,
-        unit_name,
-        journey_stage,
-        channel,
-        responsible_area,
-        delivery_applicable,
-        active,
-        description,
-        created_at,
-        updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-    [
-      slug,
-      title,
-      unitName,
-      journeyStage,
-      channel,
-      responsibleArea,
-      deliveryApplicable ? 1 : 0,
-      1,
-      description,
-      now,
-      now,
-    ],
-  );
-
-  return getCollectionPointById(result.lastInsertId);
-}
-
-export async function saveResponse(slug, payload) {
-  const db = await ensureAdapter();
-  const point = await getCollectionPointBySlug(slug);
-  if (!point || !point.active) {
-    throw new Error("Ponto de coleta nao encontrado ou inativo.");
-  }
-
-  const scores = {
-    overallScore: Number(payload.overallScore),
-    serviceQuality: Number(payload.serviceQuality),
-    guidanceClarity: Number(payload.guidanceClarity),
-    solutionFit: Number(payload.solutionFit),
-    operationalEfficiency: Number(payload.operationalEfficiency),
-  };
-
-  for (const [field, value] of Object.entries(scores)) {
-    if (!Number.isInteger(value) || value < 1 || value > 5) {
-      throw new Error(`Campo invalido: ${field}.`);
-    }
-  }
-
-  const anonymous = toBoolean(payload.anonymous);
-  const deliveryRating = point.deliveryApplicable ? Number(payload.deliveryRating) : null;
-
-  if (point.deliveryApplicable && (!Number.isInteger(deliveryRating) || deliveryRating < 1 || deliveryRating > 5)) {
-    throw new Error("Informe a avaliacao da entrega.");
-  }
-
-  const customerName = anonymous ? null : toNullableText(payload.customerName);
-  const contactChannel = anonymous ? null : toNullableText(payload.contactChannel);
-  const comment = toNullableText(payload.comment);
-  const sourceContext = toNullableText(payload.sourceContext) || point.channel;
-
-  const result = await db.run(
-    `
-      INSERT INTO responses (
-        point_id,
-        overall_score,
-        service_quality,
-        guidance_clarity,
-        solution_fit,
-        operational_efficiency,
-        delivery_rating,
-        anonymous,
-        customer_name,
-        contact_channel,
-        comment,
-        source_context,
-        created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `,
-    [
-      point.id,
-      scores.overallScore,
-      scores.serviceQuality,
-      scores.guidanceClarity,
-      scores.solutionFit,
-      scores.operationalEfficiency,
-      deliveryRating,
-      anonymous ? 1 : 0,
-      customerName,
-      contactChannel,
-      comment,
-      sourceContext,
-      nowIso(),
-    ],
-  );
-
-  return {
-    id: result.lastInsertId,
-    point,
-  };
-}
-
 export async function getDashboard(filters = {}) {
   const db = await ensureAdapter();
   const filter = buildResponseFilter(filters);
+
   const summary = await db.get(
-    `
-      SELECT
+    `SELECT
         COUNT(*) AS total_responses,
-        ROUND(AVG(r.overall_score), 2) AS average_overall,
-        ROUND(AVG(r.service_quality), 2) AS average_service_quality,
-        ROUND(AVG(r.guidance_clarity), 2) AS average_guidance_clarity,
-        ROUND(AVG(r.solution_fit), 2) AS average_solution_fit,
-        ROUND(AVG(r.operational_efficiency), 2) AS average_operational_efficiency,
-        ROUND(AVG(r.delivery_rating), 2) AS average_delivery_rating
+        ROUND(AVG(r.overall_score), 2) AS average_overall
       FROM responses r
-      JOIN collection_points cp ON cp.id = r.point_id
-      ${filter.sql}
-    `,
+      JOIN sectors s ON s.id = r.sector_id
+      ${filter.sql}`,
     filter.params,
   );
 
   const trend = await db.all(
-    `
-      SELECT
+    `SELECT
         substr(r.created_at, 1, 10) AS day,
         COUNT(*) AS responses,
         ROUND(AVG(r.overall_score), 2) AS average_score
       FROM responses r
-      JOIN collection_points cp ON cp.id = r.point_id
+      JOIN sectors s ON s.id = r.sector_id
       ${filter.sql}
       GROUP BY substr(r.created_at, 1, 10)
       ORDER BY day DESC
-      LIMIT 14
-    `,
+      LIMIT 14`,
     filter.params,
   );
 
-  const byJourney = await db.all(
-    `
-      SELECT
-        cp.journey_stage AS label,
+  const bySector = await db.all(
+    `SELECT
+        s.name AS label,
+        s.slug AS slug,
         COUNT(*) AS responses,
         ROUND(AVG(r.overall_score), 2) AS average_score
       FROM responses r
-      JOIN collection_points cp ON cp.id = r.point_id
+      JOIN sectors s ON s.id = r.sector_id
       ${filter.sql}
-      GROUP BY cp.journey_stage
-      ORDER BY responses DESC, label ASC
-    `,
+      GROUP BY s.id, s.name, s.slug
+      ORDER BY responses DESC, label ASC`,
     filter.params,
   );
 
-  const byChannel = await db.all(
-    `
-      SELECT
-        cp.channel AS label,
+  const topEmployees = await db.all(
+    `SELECT
+        e.id AS employee_id,
+        e.name AS label,
+        s.name AS sector_name,
         COUNT(*) AS responses,
         ROUND(AVG(r.overall_score), 2) AS average_score
       FROM responses r
-      JOIN collection_points cp ON cp.id = r.point_id
+      JOIN employees e ON e.id = r.employee_id
+      JOIN sectors s ON s.id = r.sector_id
       ${filter.sql}
-      GROUP BY cp.channel
-      ORDER BY responses DESC, label ASC
-    `,
-    filter.params,
-  );
-
-  const byArea = await db.all(
-    `
-      SELECT
-        cp.responsible_area AS label,
-        COUNT(*) AS responses,
-        ROUND(AVG(r.overall_score), 2) AS average_score
-      FROM responses r
-      JOIN collection_points cp ON cp.id = r.point_id
-      ${filter.sql}
-      GROUP BY cp.responsible_area
-      ORDER BY responses DESC, label ASC
-    `,
+      GROUP BY e.id, e.name, s.name
+      HAVING COUNT(*) >= 1
+      ORDER BY average_score DESC, responses DESC
+      LIMIT 6`,
     filter.params,
   );
 
   const comments = await db.all(
-    `
-      SELECT
+    `SELECT
         r.id,
         r.comment,
-        r.overall_score AS overall_score,
+        r.overall_score,
+        r.customer_name,
         r.created_at,
-        cp.title,
-        cp.unit_name
+        s.name AS sector_name,
+        e.name AS employee_name
       FROM responses r
-      JOIN collection_points cp ON cp.id = r.point_id
-      ${filter.sql ? `${filter.sql} AND` : "WHERE"} r.comment IS NOT NULL
+      JOIN sectors s ON s.id = r.sector_id
+      LEFT JOIN employees e ON e.id = r.employee_id
+      ${filter.sql ? `${filter.sql} AND` : "WHERE"} r.comment IS NOT NULL AND r.comment <> ''
       ORDER BY r.created_at DESC
-      LIMIT 8
-    `,
+      LIMIT 8`,
     filter.params,
   );
 
   const lowScoreSignals = await db.all(
-    `
-      SELECT
-        cp.title,
-        cp.unit_name,
+    `SELECT
+        e.name AS employee_name,
+        s.name AS sector_name,
         COUNT(*) AS low_score_count
       FROM responses r
-      JOIN collection_points cp ON cp.id = r.point_id
+      JOIN sectors s ON s.id = r.sector_id
+      LEFT JOIN employees e ON e.id = r.employee_id
       ${filter.sql ? `${filter.sql} AND` : "WHERE"} r.overall_score <= 2
-      GROUP BY cp.id, cp.title, cp.unit_name
-      ORDER BY low_score_count DESC, cp.title ASC
-      LIMIT 5
-    `,
+      GROUP BY s.id, s.name, e.id, e.name
+      ORDER BY low_score_count DESC, s.name ASC
+      LIMIT 5`,
     filter.params,
   );
 
@@ -638,11 +838,6 @@ export async function getDashboard(filters = {}) {
     summary: {
       totalResponses: Number(summary?.total_responses ?? 0),
       averageOverall: formatAverage(summary?.average_overall),
-      averageServiceQuality: formatAverage(summary?.average_service_quality),
-      averageGuidanceClarity: formatAverage(summary?.average_guidance_clarity),
-      averageSolutionFit: formatAverage(summary?.average_solution_fit),
-      averageOperationalEfficiency: formatAverage(summary?.average_operational_efficiency),
-      averageDeliveryRating: formatAverage(summary?.average_delivery_rating),
     },
     trend: [...trend]
       .reverse()
@@ -652,18 +847,16 @@ export async function getDashboard(filters = {}) {
         averageScore: row.average_score === null ? null : Number(row.average_score),
       })),
     breakdowns: {
-      byJourney: byJourney.map((row) => ({
+      bySector: bySector.map((row) => ({
         label: row.label,
+        slug: row.slug,
         responses: Number(row.responses),
         average_score: row.average_score === null ? null : Number(row.average_score),
       })),
-      byChannel: byChannel.map((row) => ({
+      topEmployees: topEmployees.map((row) => ({
+        employeeId: Number(row.employee_id),
         label: row.label,
-        responses: Number(row.responses),
-        average_score: row.average_score === null ? null : Number(row.average_score),
-      })),
-      byArea: byArea.map((row) => ({
-        label: row.label,
+        sectorName: row.sector_name,
         responses: Number(row.responses),
         average_score: row.average_score === null ? null : Number(row.average_score),
       })),
@@ -671,15 +864,16 @@ export async function getDashboard(filters = {}) {
     comments: comments.map((row) => ({
       id: Number(row.id),
       comment: row.comment,
-      overallScore: Number(row.overall_score),
+      overallScore: row.overall_score === null ? null : Number(row.overall_score),
+      customerName: row.customer_name,
+      sectorName: row.sector_name,
+      employeeName: row.employee_name,
       createdAt: row.created_at,
-      title: row.title,
-      unitName: row.unit_name,
     })),
     lowScoreSignals: lowScoreSignals.map((row) => ({
-      title: row.title,
-      unit_name: row.unit_name,
-      low_score_count: Number(row.low_score_count),
+      employeeName: row.employee_name,
+      sectorName: row.sector_name,
+      lowScoreCount: Number(row.low_score_count),
     })),
   };
 }
@@ -688,57 +882,50 @@ export async function exportResponsesCsv(filters = {}) {
   const db = await ensureAdapter();
   const filter = buildResponseFilter(filters);
   const rows = await db.all(
-    `
-      SELECT
+    `SELECT
         r.created_at,
-        cp.title,
-        cp.unit_name,
-        cp.journey_stage,
-        cp.channel,
-        cp.responsible_area,
-        r.overall_score,
-        r.service_quality,
-        r.guidance_clarity,
-        r.solution_fit,
-        r.operational_efficiency,
-        r.delivery_rating,
-        r.anonymous,
+        s.name AS sector_name,
+        e.name AS employee_name,
         r.customer_name,
-        r.contact_channel,
-        r.comment,
-        r.source_context
+        r.customer_contact,
+        r.overall_score,
+        r.comment
       FROM responses r
-      JOIN collection_points cp ON cp.id = r.point_id
+      JOIN sectors s ON s.id = r.sector_id
+      LEFT JOIN employees e ON e.id = r.employee_id
       ${filter.sql}
-      ORDER BY r.created_at DESC
-    `,
+      ORDER BY r.created_at DESC`,
     filter.params,
   );
 
   const header = [
     "created_at",
-    "title",
-    "unit_name",
-    "journey_stage",
-    "channel",
-    "responsible_area",
-    "overall_score",
-    "service_quality",
-    "guidance_clarity",
-    "solution_fit",
-    "operational_efficiency",
-    "delivery_rating",
-    "anonymous",
+    "sector_name",
+    "employee_name",
     "customer_name",
-    "contact_channel",
+    "customer_contact",
+    "overall_score",
     "comment",
-    "source_context",
   ];
 
-  const lines = [
-    header.join(","),
-    ...rows.map((row) => header.map((key) => escapeCsv(row[key])).join(",")),
-  ];
+  const lines = [header.join(",")];
+  for (const row of rows) {
+    lines.push(
+      [
+        escapeCsv(row.created_at),
+        escapeCsv(row.sector_name),
+        escapeCsv(row.employee_name),
+        escapeCsv(row.customer_name),
+        escapeCsv(row.customer_contact),
+        escapeCsv(row.overall_score),
+        escapeCsv(row.comment),
+      ].join(","),
+    );
+  }
 
   return lines.join("\n");
+}
+
+export function slugifyName(value) {
+  return slugify(value);
 }

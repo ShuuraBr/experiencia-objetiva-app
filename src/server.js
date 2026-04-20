@@ -6,14 +6,15 @@ import express from "express";
 import QRCode from "qrcode";
 
 import {
-  createCollectionPoint,
+  createEmployee,
+  deactivateEmployee,
   exportResponsesCsv,
-  getCollectionPointById,
-  getCollectionPointBySlug,
   getDashboard,
-  listCollectionPoints,
-  saveResponse,
   getDatabaseStatus,
+  getSectorWithDetails,
+  listEmployees,
+  listSectors,
+  saveResponse,
   storageMode,
 } from "./db.js";
 
@@ -34,23 +35,19 @@ function baseUrl(req) {
   return configuredBaseUrl || `${req.protocol}://${req.get("host")}`;
 }
 
-function enrichPoint(point, req) {
-  return {
-    ...point,
-    accessUrl: `${baseUrl(req)}/avaliar/${point.slug}`,
-    qrCodeUrl: `${baseUrl(req)}/api/points/${point.id}/qr`,
-  };
-}
-
-app.get("/api/config", (_req, res) => {
+app.get("/api/config", (req, res) => {
   const databaseStatus = getDatabaseStatus();
   res.json({
-    appName: "Experiencia Objetiva",
-    description: "Sistema corporativo de avaliacao da experiencia do cliente com coleta continua, QR code e indicadores gerenciais.",
-    privacyNotice: "A avaliacao sera utilizada exclusivamente para melhoria dos servicos prestados, de forma interna e confidencial.",
+    appName: "Experiência Objetiva",
+    description:
+      "Sistema corporativo de avaliação da experiência do cliente com coleta contínua, QR code e indicadores gerenciais.",
+    privacyNotice:
+      "A avaliação é utilizada exclusivamente para melhoria dos serviços prestados, de forma interna e confidencial.",
     storageMode,
     databaseReady: databaseStatus.ready,
     databaseError: databaseStatus.error,
+    surveyUrl: `${baseUrl(req)}/avaliar`,
+    qrCodeUrl: `${baseUrl(req)}/api/qr`,
   });
 });
 
@@ -64,39 +61,70 @@ app.get("/health", (_req, res) => {
   });
 });
 
-app.get("/api/points", async (req, res) => {
-  const points = (await listCollectionPoints()).map((point) => enrichPoint(point, req));
-  res.json({ points });
-});
-
-app.get("/api/points/:id", async (req, res) => {
-  const point = await getCollectionPointById(req.params.id);
-  if (!point) {
-    res.status(404).json({ error: "Ponto de coleta nao encontrado." });
-    return;
-  }
-
-  res.json({ point: enrichPoint(point, req) });
-});
-
-app.post("/api/points", async (req, res) => {
+app.get("/api/sectors", async (_req, res, next) => {
   try {
-    const point = await createCollectionPoint(req.body);
-    res.status(201).json({ point: enrichPoint(point, req) });
+    const sectors = await listSectors();
+    res.json({ sectors });
   } catch (error) {
-    res.status(400).json({ error: error.message || "Nao foi possivel criar o ponto de coleta." });
+    next(error);
   }
 });
 
-app.get("/api/points/:id/qr", async (req, res, next) => {
+app.get("/api/sectors/:slug", async (req, res, next) => {
   try {
-    const point = await getCollectionPointById(req.params.id);
-    if (!point) {
-      res.status(404).send("Ponto de coleta nao encontrado.");
+    const sector = await getSectorWithDetails(req.params.slug);
+    if (!sector) {
+      res.status(404).json({ error: "Setor não encontrado." });
       return;
     }
+    res.json({ sector });
+  } catch (error) {
+    next(error);
+  }
+});
 
-    const svg = await QRCode.toString(`${baseUrl(req)}/avaliar/${point.slug}`, {
+app.get("/api/employees", async (req, res, next) => {
+  try {
+    const employees = await listEmployees({ sectorId: req.query.sectorId });
+    res.json({ employees });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/employees", async (req, res) => {
+  try {
+    const employee = await createEmployee(req.body);
+    res.status(201).json({ employee });
+  } catch (error) {
+    res.status(400).json({ error: error.message || "Não foi possível cadastrar o funcionário." });
+  }
+});
+
+app.delete("/api/employees/:id", async (req, res) => {
+  try {
+    await deactivateEmployee(req.params.id);
+    res.status(204).end();
+  } catch (error) {
+    res.status(400).json({ error: error.message || "Não foi possível remover o funcionário." });
+  }
+});
+
+app.post("/api/responses", async (req, res) => {
+  try {
+    const response = await saveResponse(req.body);
+    res.status(201).json({
+      response,
+      message: "Avaliação registrada com sucesso.",
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message || "Não foi possível salvar a avaliação." });
+  }
+});
+
+app.get("/api/qr", async (req, res, next) => {
+  try {
+    const svg = await QRCode.toString(`${baseUrl(req)}/avaliar`, {
       type: "svg",
       margin: 2,
       width: 320,
@@ -115,48 +143,38 @@ app.get("/api/points/:id/qr", async (req, res, next) => {
   }
 });
 
-app.get("/api/public/:slug", async (req, res) => {
-  const point = await getCollectionPointBySlug(req.params.slug);
-  if (!point || !point.active) {
-    res.status(404).json({ error: "Ponto de coleta nao encontrado ou inativo." });
-    return;
-  }
-
-  res.json({ point: enrichPoint(point, req) });
-});
-
-app.post("/api/public/:slug/responses", async (req, res) => {
+app.get("/api/dashboard", async (req, res, next) => {
   try {
-    const response = await saveResponse(req.params.slug, req.body);
-    res.status(201).json({
-      response,
-      message: "Avaliacao registrada com sucesso.",
+    const dashboard = await getDashboard({
+      sectorId: req.query.sectorId,
+      employeeId: req.query.employeeId,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
     });
+    res.json({ dashboard });
   } catch (error) {
-    res.status(400).json({ error: error.message || "Nao foi possivel salvar a avaliacao." });
+    next(error);
   }
 });
 
-app.get("/api/dashboard", async (req, res) => {
-  const dashboard = await getDashboard({
-    pointId: req.query.pointId,
-    startDate: req.query.startDate,
-    endDate: req.query.endDate,
-  });
+app.get("/api/dashboard/export.csv", async (req, res, next) => {
+  try {
+    const csv = await exportResponsesCsv({
+      sectorId: req.query.sectorId,
+      employeeId: req.query.employeeId,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
+    });
 
-  res.json({ dashboard });
-});
-
-app.get("/api/dashboard/export.csv", async (req, res) => {
-  const csv = await exportResponsesCsv({
-    pointId: req.query.pointId,
-    startDate: req.query.startDate,
-    endDate: req.query.endDate,
-  });
-
-  res.setHeader("Content-Type", "text/csv; charset=utf-8");
-  res.setHeader("Content-Disposition", 'attachment; filename="experiencia-objetiva-respostas.csv"');
-  res.send(csv);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      'attachment; filename="experiencia-objetiva-respostas.csv"',
+    );
+    res.send(csv);
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.get("/", (_req, res) => {
@@ -167,26 +185,18 @@ app.get("/gestao", (_req, res) => {
   res.sendFile(path.join(publicDir, "admin.html"));
 });
 
-app.get("/avaliar/:slug", (_req, res) => {
+app.get(["/avaliar", "/avaliar/:legacy"], (_req, res) => {
   res.sendFile(path.join(publicDir, "survey.html"));
 });
 
-app.use((error, req, res, next) => {
+app.use((error, req, res, _next) => {
   console.error(`[server] ${req.method} ${req.originalUrl}`, error);
-
-  if (res.headersSent) {
-    next(error);
-    return;
-  }
-
-  if (req.path.startsWith("/api/") || req.path === "/health") {
-    res.status(500).json({ error: error.message || "Erro interno do servidor." });
-    return;
-  }
-
-  res.status(500).send("Erro interno do servidor.");
+  res.status(500).json({
+    error: "Erro interno ao processar a solicitação.",
+    detail: error?.message,
+  });
 });
 
-export const server = app.listen(port, () => {
-  console.log(`Experiencia Objetiva disponivel em ${configuredBaseUrl || `http://localhost:${port}`} usando ${storageMode}.`);
+app.listen(port, () => {
+  console.log(`[server] listening on http://localhost:${port} (storage: ${storageMode})`);
 });
