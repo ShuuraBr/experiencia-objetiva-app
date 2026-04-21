@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login | Experiência Objetiva</title>
+    <link rel="icon" type="image/png" href="/assets/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="login-body">
+    <div class="login-shell">
+      <div class="login-brand">
+        <img src="/assets/objetiva-logo.png" alt="Objetiva Atacadista da Construção" class="login-logo" />
+        <p class="eyebrow" style="color:rgba(242,245,255,0.7);margin-top:18px;">Painel Gerencial</p>
+        <h1 class="login-title">Experiência<br/>Objetiva</h1>
+        <p style="color:rgba(242,245,255,0.65);line-height:1.6;margin-top:12px;max-width:32ch;">
+          Acesso restrito ao time de gestão.<br/>Login com verificação em 2 etapas.
+        </p>
+      </div>
+
+      <div class="login-card">
+        <!-- Step 1: Email + Password -->
+        <div id="step1">
+          <p class="eyebrow">Passo 1 de 2</p>
+          <h2 class="login-card-title">Entrar no painel</h2>
+          <p class="login-card-desc">Informe seu e-mail e senha para receber o código de verificação.</p>
+
+          <div class="login-form-group">
+            <label>
+              <span>E-mail</span>
+              <input type="email" id="emailInput" placeholder="admin@objetiva.com.br" autocomplete="email" />
+            </label>
+            <label>
+              <span>Senha</span>
+              <input type="password" id="passwordInput" placeholder="••••••••" autocomplete="current-password" />
+            </label>
+            <button class="primary-button login-btn" id="loginBtn" type="button">
+              <span id="loginBtnText">Continuar</span>
+            </button>
+            <p class="login-feedback" id="loginFeedback"></p>
+          </div>
+        </div>
+
+        <!-- Step 2: 2FA Code -->
+        <div id="step2" hidden>
+          <p class="eyebrow">Passo 2 de 2</p>
+          <h2 class="login-card-title">Verificação em 2 etapas</h2>
+          <p class="login-card-desc" id="step2Desc">Digite o código de 6 dígitos enviado para o seu e-mail.</p>
+
+          <div class="login-form-group">
+            <label>
+              <span>Código de verificação</span>
+              <input type="text" id="codeInput" placeholder="000000" maxlength="6"
+                inputmode="numeric" autocomplete="one-time-code" class="code-input" />
+            </label>
+            <button class="primary-button login-btn" id="verifyBtn" type="button">
+              <span id="verifyBtnText">Verificar e entrar</span>
+            </button>
+            <p class="login-feedback" id="verifyFeedback"></p>
+            <button class="ghost-button small back-btn" id="backBtn" type="button">← Voltar</button>
+          </div>
+        </div>
+
+        <div class="login-card-footer">
+          <p class="mono-label">Segurança</p>
+          <p style="color:var(--text-soft);font-size:0.85rem;line-height:1.6;">
+            O código expira em 10 minutos. Sessões duram 8 horas.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/login.js"></script>
+  </body>
+</html>

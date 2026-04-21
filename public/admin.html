@@ -5,94 +5,191 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Painel | Experiência Objetiva</title>
     <link rel="icon" type="image/png" href="/assets/favicon.png" />
-    <link rel="shortcut icon" type="image/png" href="/assets/favicon.png" />
-    <link rel="apple-touch-icon" href="/assets/favicon.png" />
     <meta name="theme-color" content="#0E2E9B" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/styles.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   </head>
   <body class="dashboard-body">
     <div class="dashboard-shell">
+
+      <!-- Sidebar -->
       <aside class="dashboard-sidebar">
         <a class="brand-link" href="/">
           <img class="brand-logo sidebar-logo" src="/assets/objetiva-logo.png" alt="Objetiva Atacadista da Construção" />
-          <div>
-            <p>Experiência Objetiva</p>
-            <small>Objetiva Atacadista</small>
-          </div>
         </a>
-
         <div class="sidebar-copy">
-          <p class="eyebrow">Objetivo</p>
-          <h1>Gerenciar funcionários e acompanhar a experiência do cliente.</h1>
-          <p>
-            Um único QR code direciona o cliente para escolher o setor e o colaborador. O painel consolida as
-            avaliações com perguntas específicas de cada setor.
-          </p>
+          <p class="eyebrow">Painel gerencial</p>
+          <h1>Experiência<br/>Objetiva</h1>
+          <p>Acompanhe avaliações por setor, colaborador e período com indicadores em tempo real.</p>
         </div>
-
+        <nav class="sidebar-nav">
+          <a href="#kpis" class="sidebar-nav-link">KPIs</a>
+          <a href="#charts" class="sidebar-nav-link">Gráficos</a>
+          <a href="#employees" class="sidebar-nav-link">Equipe</a>
+          <a href="#comments" class="sidebar-nav-link">Comentários</a>
+        </nav>
         <div class="sidebar-section">
-          <p class="mono-label">Privacidade</p>
-          <p class="muted-text">A avaliação é utilizada exclusivamente para melhoria dos serviços prestados, de forma interna e confidencial.</p>
+          <p class="mono-label">Acesso</p>
+          <p class="muted-text" id="authEmail" style="color:rgba(255,255,255,0.6);font-size:0.85rem;"></p>
+          <button class="ghost-button small" id="logoutBtn" type="button" style="margin-top:12px;width:100%;">Sair</button>
         </div>
       </aside>
 
+      <!-- Main -->
       <main class="dashboard-main">
+
+        <!-- Top bar -->
         <section class="topbar">
           <div>
-            <p class="eyebrow">Painel gerencial</p>
-            <h2>Visão consolidada da operação</h2>
+            <p class="eyebrow">Visão geral</p>
+            <h2>Dashboard de Avaliações</h2>
           </div>
           <div class="topbar-actions">
             <label class="inline-filter">
               <span>Filtrar por setor</span>
-              <select id="sectorFilter">
-                <option value="">Todos</option>
-              </select>
+              <select id="sectorFilter"><option value="">Todos</option></select>
+            </label>
+            <label class="inline-filter">
+              <span>Data início</span>
+              <input type="date" id="startDate" style="min-width:140px;" />
+            </label>
+            <label class="inline-filter">
+              <span>Data fim</span>
+              <input type="date" id="endDate" style="min-width:140px;" />
             </label>
             <a class="ghost-button" id="exportButton" href="/api/dashboard/export.csv">Exportar CSV</a>
           </div>
         </section>
 
-        <section class="metrics-row" id="summaryCards"></section>
+        <!-- ── Summary KPIs Row 1 ── -->
+        <section class="metrics-row" id="kpis">
+          <article class="metric-card">
+            <span>Total de respostas</span>
+            <strong id="metricTotal">--</strong>
+          </article>
+          <article class="metric-card">
+            <span>Média geral</span>
+            <strong id="metricAvg">--</strong>
+          </article>
+          <article class="metric-card kpi-clickable" id="kpiLow" title="Clique para ver ranking">
+            <span>Nível Baixo (1–2)</span>
+            <strong id="metricLow">--%</strong>
+            <small id="metricLowCount" class="kpi-sub"></small>
+          </article>
+          <article class="metric-card kpi-clickable" id="kpiHigh" title="Clique para ver ranking">
+            <span>Nível Alto (4–5)</span>
+            <strong id="metricHigh">--%</strong>
+            <small id="metricHighCount" class="kpi-sub"></small>
+          </article>
+          <article class="metric-card">
+            <span>Setores ativos</span>
+            <strong id="metricSectors">--</strong>
+          </article>
+          <article class="metric-card">
+            <span>Funcionários</span>
+            <strong id="metricEmployees">--</strong>
+          </article>
+        </section>
 
-        <section class="dashboard-grid">
+        <!-- ── Score Distribution Row ── -->
+        <section class="score-dist-row" id="scoreDist">
+          <p class="eyebrow" style="margin:0 0 14px;grid-column:1/-1;">Distribuição por avaliação — clique para ver ranking</p>
+          <article class="score-dist-card kpi-clickable" data-score="1" id="kpi1">
+            <span class="score-emoji">😡</span>
+            <span class="score-label">Péssimo</span>
+            <strong class="score-count" id="count1">0</strong>
+          </article>
+          <article class="score-dist-card kpi-clickable" data-score="2" id="kpi2">
+            <span class="score-emoji">😕</span>
+            <span class="score-label">Ruim</span>
+            <strong class="score-count" id="count2">0</strong>
+          </article>
+          <article class="score-dist-card kpi-clickable" data-score="3" id="kpi3">
+            <span class="score-emoji">😐</span>
+            <span class="score-label">Neutro</span>
+            <strong class="score-count" id="count3">0</strong>
+          </article>
+          <article class="score-dist-card kpi-clickable" data-score="4" id="kpi4">
+            <span class="score-emoji">🙂</span>
+            <span class="score-label">Bom</span>
+            <strong class="score-count" id="count4">0</strong>
+          </article>
+          <article class="score-dist-card kpi-clickable" data-score="5" id="kpi5">
+            <span class="score-emoji">😍</span>
+            <span class="score-label">Excelente</span>
+            <strong class="score-count" id="count5">0</strong>
+          </article>
+        </section>
+
+        <!-- ── Charts Row ── -->
+        <section class="dashboard-grid" id="charts" style="margin-bottom:20px;">
           <article class="workspace-panel">
             <div class="panel-heading">
-              <div>
-                <p class="eyebrow">QR Code único</p>
-                <h3>Acesso unificado da avaliação</h3>
-              </div>
+              <div><p class="eyebrow">Tendência</p><h3>Média diária de avaliações</h3></div>
+            </div>
+            <div style="position:relative;height:220px;">
+              <canvas id="trendCanvas"></canvas>
+            </div>
+          </article>
+          <article class="workspace-panel">
+            <div class="panel-heading">
+              <div><p class="eyebrow">Por setor</p><h3>Setores mais avaliados</h3></div>
+            </div>
+            <div style="position:relative;height:220px;">
+              <canvas id="sectorCanvas"></canvas>
+            </div>
+          </article>
+        </section>
+
+        <!-- ── Charts Row 2 ── -->
+        <section class="dashboard-grid" style="margin-bottom:20px;">
+          <article class="workspace-panel">
+            <div class="panel-heading">
+              <div><p class="eyebrow">Notas</p><h3>Média por setor</h3></div>
+            </div>
+            <div style="position:relative;height:220px;">
+              <canvas id="avgSectorCanvas"></canvas>
+            </div>
+          </article>
+          <article class="workspace-panel">
+            <div class="panel-heading">
+              <div><p class="eyebrow">Distribuição</p><h3>Avaliações por categoria</h3></div>
+            </div>
+            <div style="position:relative;height:220px;">
+              <canvas id="distCanvas"></canvas>
+            </div>
+          </article>
+        </section>
+
+        <!-- ── Employee Management ── -->
+        <section class="dashboard-grid" id="employees" style="margin-bottom:20px;">
+          <article class="workspace-panel">
+            <div class="panel-heading">
+              <div><p class="eyebrow">QR Code</p><h3>Acesso unificado da avaliação</h3></div>
             </div>
             <div class="qr-panel">
               <div class="qr-wrap large">
-                <img id="qrImage" src="/api/qr" alt="QR code da avaliação" />
+                <img id="qrImage" src="/api/qr" alt="QR code" />
               </div>
               <label class="link-box">
                 <span>Link público</span>
                 <input type="text" id="surveyLink" readonly />
               </label>
               <div class="card-actions">
-                <button class="ghost-button small" id="copyLinkButton" type="button">Copiar link</button>
-                <a class="ghost-button small" id="openSurveyLink" href="/avaliar" target="_blank" rel="noreferrer">Abrir avaliação</a>
-                <a class="ghost-button small" href="/api/qr" download="experiencia-objetiva-qr.svg">Baixar QR (SVG)</a>
+                <button class="ghost-button small" id="copyLinkButton">Copiar link</button>
+                <a class="ghost-button small" id="openSurveyLink" href="/avaliar" target="_blank">Abrir avaliação</a>
+                <a class="ghost-button small" href="/api/qr" download="experiencia-objetiva-qr.svg">Baixar QR</a>
               </div>
             </div>
           </article>
 
           <article class="workspace-panel">
             <div class="panel-heading">
-              <div>
-                <p class="eyebrow">Cadastro</p>
-                <h3>Novo funcionário</h3>
-              </div>
+              <div><p class="eyebrow">Cadastro</p><h3>Novo funcionário</h3></div>
             </div>
-
             <form class="point-form" id="employeeForm">
               <label>
                 <span>Nome do funcionário</span>
@@ -114,46 +211,51 @@
           </article>
         </section>
 
-        <section class="dashboard-grid secondary">
+        <!-- ── Employees list + Rankings ── -->
+        <section class="dashboard-grid secondary" style="margin-bottom:20px;">
           <article class="workspace-panel">
             <div class="panel-heading">
-              <div>
-                <p class="eyebrow">Equipe cadastrada</p>
-                <h3>Funcionários por setor</h3>
-              </div>
+              <div><p class="eyebrow">Equipe</p><h3>Funcionários por setor</h3></div>
             </div>
             <div class="employees-grid" id="employeesList"></div>
           </article>
-
           <article class="workspace-panel">
             <div class="panel-heading">
-              <div>
-                <p class="eyebrow">Leituras de apoio</p>
-                <h3>Quebras e comentários recentes</h3>
-              </div>
+              <div><p class="eyebrow">Destaques</p><h3>Top colaboradores</h3></div>
             </div>
-            <div class="breakdowns-grid">
-              <section>
-                <h4>Por setor</h4>
-                <div id="breakdownSector" class="bar-list"></div>
-              </section>
-              <section>
-                <h4>Destaques (média por funcionário)</h4>
-                <div id="breakdownEmployees" class="bar-list"></div>
-              </section>
-              <section>
-                <h4>Tendência diária</h4>
-                <div id="trendChart" class="trend-chart"></div>
-              </section>
-              <section>
-                <h4>Sinais de notas baixas</h4>
-                <div id="signalsList" class="signal-list"></div>
-              </section>
+            <div class="bar-list" id="breakdownEmployees"></div>
+            <div class="panel-heading" style="margin-top:24px;">
+              <div><p class="eyebrow">Alertas</p><h3>Sinais de notas baixas</h3></div>
             </div>
-            <div class="comments-stack" id="commentsList"></div>
+            <div class="signal-list" id="signalsList"></div>
           </article>
         </section>
+
+        <!-- ── Comments ── -->
+        <section class="workspace-panel" id="comments" style="margin-bottom:28px;">
+          <div class="panel-heading">
+            <div><p class="eyebrow">Feedback aberto</p><h3>Comentários recentes</h3></div>
+          </div>
+          <div class="comments-stack" id="commentsList"></div>
+        </section>
+
       </main>
+    </div>
+
+    <!-- ── Ranking Modal ── -->
+    <div class="modal-overlay" id="modalOverlay" hidden>
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3 id="modalTitle">Ranking</h3>
+          <button class="modal-close" id="modalClose" type="button">✕</button>
+        </div>
+        <div class="modal-tabs">
+          <button class="modal-tab active" id="tabSector" type="button">Por Setor</button>
+          <button class="modal-tab" id="tabEmployee" type="button">Por Colaborador</button>
+        </div>
+        <div id="modalContentSector" class="modal-content"></div>
+        <div id="modalContentEmployee" class="modal-content" hidden></div>
+      </div>
     </div>
 
     <script type="module" src="/admin.js"></script>
