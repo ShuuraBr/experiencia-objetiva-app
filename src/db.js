@@ -208,6 +208,16 @@ const sqliteSchema = `
     expires_at TEXT NOT NULL,
     used INTEGER NOT NULL DEFAULT 0
   );
+
+  CREATE TABLE IF NOT EXISTS admin_users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    name TEXT NOT NULL DEFAULT '',
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
 `;
 
 // ---------------------------------------------------------------------------
@@ -806,3 +816,68 @@ export async function deleteSession(id) {
 }
 
 export function slugifyName(value) { return slugify(value); }
+
+// ---------------------------------------------------------------------------
+// Admin users management
+// ---------------------------------------------------------------------------
+import { createHash } from "node:crypto";
+
+function hashPassword(password) {
+  return createHash("sha256").update(password + "objetiva_salt_2024").digest("hex");
+}
+
+export async function listAdminUsers() {
+  const db = await ensureAdapter();
+  const rows = await db.all(
+    `SELECT id, email, name, active, created_at, updated_at FROM admin_users ORDER BY created_at ASC`
+  );
+  return rows.map((r) => ({
+    id: Number(r.id), email: r.email, name: r.name,
+    active: Boolean(Number(r.active)), createdAt: r.created_at,
+  }));
+}
+
+export async function createAdminUser(payload) {
+  const db = await ensureAdapter();
+  const email    = toNullableText(payload.email)?.toLowerCase();
+  const password = toNullableText(payload.password);
+  const name     = toNullableText(payload.name) || "";
+  if (!email || !email.includes("@")) throw new Error("Informe um e-mail válido.");
+  if (!password || password.length < 6)  throw new Error("A senha deve ter ao menos 6 caracteres.");
+  const exists = await db.get(`SELECT id FROM admin_users WHERE email = ?`, [email]);
+  if (exists) throw new Error("Este e-mail já está cadastrado.");
+  const now = nowIso();
+  const result = await db.run(
+    `INSERT INTO admin_users (email, password_hash, name, active, created_at, updated_at) VALUES (?,?,?,1,?,?)`,
+    [email, hashPassword(password), name, now, now]
+  );
+  return { id: result.lastInsertId, email, name };
+}
+
+export async function updateAdminUserPassword(id, newPassword) {
+  const db = await ensureAdapter();
+  if (!newPassword || newPassword.length < 6) throw new Error("A senha deve ter ao menos 6 caracteres.");
+  await db.run(
+    `UPDATE admin_users SET password_hash = ?, updated_at = ? WHERE id = ?`,
+    [hashPassword(newPassword), nowIso(), Number(id)]
+  );
+}
+
+export async function deactivateAdminUser(id) {
+  const db = await ensureAdapter();
+  await db.run(`UPDATE admin_users SET active = 0, updated_at = ? WHERE id = ?`, [nowIso(), Number(id)]);
+}
+
+export async function validateAdminCredentials(email, password) {
+  const db = await ensureAdapter();
+  const row = await db.get(
+    `SELECT id, email, name FROM admin_users WHERE email = ? AND password_hash = ? AND active = 1`,
+    [email.toLowerCase(), hashPassword(password)]
+  );
+  return row ? { id: Number(row.id), email: row.email, name: row.name } : null;
+}
+
+export async function getAdminUserByEmail(email) {
+  const db = await ensureAdapter();
+  return db.get(`SELECT id, email, name, active FROM admin_users WHERE email = ?`, [email.toLowerCase()]);
+}

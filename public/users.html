@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Usuários | Experiência Objetiva</title>
+    <link rel="icon" type="image/png" href="/assets/favicon.png" />
+    <meta name="theme-color" content="#0E2E9B" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="dashboard-body">
+    <div class="dashboard-shell">
+
+      <!-- Sidebar -->
+      <aside class="dashboard-sidebar">
+        <a class="brand-link" href="/gestao">
+          <img class="brand-logo sidebar-logo" src="/assets/objetiva-logo.png" alt="Objetiva Atacadista da Construção" />
+        </a>
+        <div class="sidebar-copy">
+          <p class="eyebrow">Gerenciar acesso</p>
+          <h1>Usuários do<br/>Painel</h1>
+          <p>Cadastre e gerencie quem pode acessar o painel gerencial com login e verificação em 2 etapas.</p>
+        </div>
+        <nav class="sidebar-nav">
+          <a href="/gestao" class="sidebar-nav-link">← Voltar ao Dashboard</a>
+        </nav>
+        <div class="sidebar-section">
+          <p class="mono-label">Sessão</p>
+          <p class="muted-text" id="authEmail" style="color:rgba(255,255,255,0.6);font-size:0.85rem;"></p>
+          <button class="ghost-button small" id="logoutBtn" type="button" style="margin-top:12px;width:100%;">Sair</button>
+        </div>
+      </aside>
+
+      <!-- Main -->
+      <main class="dashboard-main">
+        <section class="topbar">
+          <div>
+            <p class="eyebrow">Controle de acesso</p>
+            <h2>Usuários Administradores</h2>
+          </div>
+        </section>
+
+        <div class="dashboard-grid" style="margin-top:22px;">
+
+          <!-- Cadastro -->
+          <article class="workspace-panel">
+            <div class="panel-heading">
+              <div><p class="eyebrow">Novo acesso</p><h3>Cadastrar usuário</h3></div>
+            </div>
+            <form class="point-form" id="userForm" style="grid-template-columns:1fr;">
+              <label>
+                <span>Nome completo</span>
+                <input type="text" name="name" placeholder="Ex.: João Silva" required />
+              </label>
+              <label>
+                <span>E-mail de acesso</span>
+                <input type="email" name="email" placeholder="Ex.: joao@objetiva.com.br" required />
+              </label>
+              <label>
+                <span>Senha inicial</span>
+                <input type="password" name="password" placeholder="Mínimo 6 caracteres"
+                  minlength="6" required autocomplete="new-password" />
+              </label>
+              <button class="primary-button" type="submit" id="userFormBtn">Cadastrar usuário</button>
+              <p class="form-feedback" id="userFormFeedback" role="status" aria-live="polite"></p>
+            </form>
+
+            <div style="margin-top:28px;padding-top:22px;border-top:1px solid var(--line);">
+              <p class="eyebrow">Alterar senha</p>
+              <form class="point-form" id="pwForm" style="grid-template-columns:1fr;margin-top:12px;">
+                <label>
+                  <span>Usuário</span>
+                  <select name="userId" id="pwUserSelect" required>
+                    <option value="">Selecione o usuário</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Nova senha</span>
+                  <input type="password" name="password" placeholder="Mínimo 6 caracteres"
+                    minlength="6" required autocomplete="new-password" />
+                </label>
+                <button class="primary-button" type="submit">Alterar senha</button>
+                <p class="form-feedback" id="pwFormFeedback" role="status" aria-live="polite"></p>
+              </form>
+            </div>
+          </article>
+
+          <!-- Lista de usuários -->
+          <article class="workspace-panel">
+            <div class="panel-heading">
+              <div><p class="eyebrow">Cadastrados</p><h3>Usuários ativos</h3></div>
+              <button class="ghost-button small" id="refreshBtn" type="button">Atualizar</button>
+            </div>
+            <div id="usersList" class="users-list"></div>
+
+            <div class="users-info-box">
+              <p class="mono-label">Informação</p>
+              <p>Cada usuário cadastrado aqui pode acessar o painel em <strong>/login</strong> usando seu e-mail e senha. O código de verificação em 2 etapas é enviado para o e-mail configurado no servidor (SMTP).</p>
+              <p style="margin-top:8px;">O usuário padrão de variável de ambiente (<strong>ADMIN_EMAIL</strong>) continua funcionando como fallback.</p>
+            </div>
+          </article>
+
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="/users.js"></script>
+  </body>
+</html>
