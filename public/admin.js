@@ -60,12 +60,20 @@ const modalContentEmployee = document.querySelector("#modalContentEmployee");
 // Modal — listeners configurados imediatamente, não dentro do boot
 // ---------------------------------------------------------------------------
 function openModal() {
+  if (!modalOverlay) return;
+  // Remove o atributo hidden para permitir que .modal-open mostre o overlay
+  // (o CSS global [hidden]{display:none !important} venceria a classe sozinho).
+  modalOverlay.hidden = false;
   modalOverlay.classList.add("modal-open");
   document.body.style.overflow = "hidden";
 }
 
 function closeModal() {
+  if (!modalOverlay) return;
   modalOverlay.classList.remove("modal-open");
+  // Reaplica o atributo hidden para blindar contra estados inconsistentes
+  // (ex.: CSS antigo em cache) que poderiam deixar o overlay visível.
+  modalOverlay.hidden = true;
   document.body.style.overflow = "";
 }
 
@@ -99,6 +107,10 @@ tabEmployee?.addEventListener("click", () => {
   modalContentEmployee.hidden = false;
   modalContentSector.hidden = true;
 });
+
+// Garante estado fechado no load, mesmo se um HTML/CSS antigo em cache
+// estiver deixando o overlay visível sem a classe .modal-open.
+closeModal();
 
 // ---------------------------------------------------------------------------
 // State
