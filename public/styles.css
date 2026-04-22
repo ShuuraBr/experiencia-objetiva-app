@@ -672,11 +672,16 @@ textarea { resize: vertical; }
   inset: 0;
   background: rgba(0, 9, 40, 0.55);
   backdrop-filter: blur(6px);
-  display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 16px;
+  /* Oculto por padrão — display:none sem depender do atributo hidden */
+  display: none;
+}
+
+.modal-overlay.modal-open {
+  display: flex;
 }
 
 .modal-box {
@@ -884,4 +889,25 @@ textarea { resize: vertical; }
 @media (max-width: 480px) {
   .metrics-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .feature-strip { grid-template-columns: 1fr; }
+}
+
+/* ── QR panel wide (sem formulário ao lado) ── */
+.qr-panel-wide {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+.qr-panel-info {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+@media (max-width: 600px) {
+  .qr-panel-wide {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
 }

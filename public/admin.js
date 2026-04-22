@@ -19,44 +19,86 @@ async function checkAuth() {
 // ---------------------------------------------------------------------------
 // DOM refs
 // ---------------------------------------------------------------------------
-const employeeForm        = document.querySelector("#employeeForm");
+const employeeForm         = document.querySelector("#employeeForm");
 const employeeFormFeedback = document.querySelector("#employeeFormFeedback");
-const employeeFormSector  = document.querySelector("#employeeFormSector");
-const employeesList       = document.querySelector("#employeesList");
-const trendCanvas         = document.querySelector("#trendCanvas");
-const sectorCanvas        = document.querySelector("#sectorCanvas");
-const avgSectorCanvas     = document.querySelector("#avgSectorCanvas");
-const distCanvas          = document.querySelector("#distCanvas");
-const breakdownEmployees  = document.querySelector("#breakdownEmployees");
-const commentsList        = document.querySelector("#commentsList");
-const signalsList         = document.querySelector("#signalsList");
-const sectorFilter        = document.querySelector("#sectorFilter");
-const startDateInput      = document.querySelector("#startDate");
-const endDateInput        = document.querySelector("#endDate");
-const exportButton        = document.querySelector("#exportButton");
-const surveyLink          = document.querySelector("#surveyLink");
-const openSurveyLink      = document.querySelector("#openSurveyLink");
-const copyLinkButton      = document.querySelector("#copyLinkButton");
-const logoutBtn           = document.querySelector("#logoutBtn");
+const employeeFormSector   = document.querySelector("#employeeFormSector");
+const employeesList        = document.querySelector("#employeesList");
+const trendCanvas          = document.querySelector("#trendCanvas");
+const sectorCanvas         = document.querySelector("#sectorCanvas");
+const avgSectorCanvas      = document.querySelector("#avgSectorCanvas");
+const distCanvas           = document.querySelector("#distCanvas");
+const breakdownEmployees   = document.querySelector("#breakdownEmployees");
+const commentsList         = document.querySelector("#commentsList");
+const signalsList          = document.querySelector("#signalsList");
+const sectorFilter         = document.querySelector("#sectorFilter");
+const startDateInput       = document.querySelector("#startDate");
+const endDateInput         = document.querySelector("#endDate");
+const exportButton         = document.querySelector("#exportButton");
+const surveyLink           = document.querySelector("#surveyLink");
+const openSurveyLink       = document.querySelector("#openSurveyLink");
+const copyLinkButton       = document.querySelector("#copyLinkButton");
+const logoutBtn            = document.querySelector("#logoutBtn");
 
-// KPI elements
-const metricTotal         = document.querySelector("#metricTotal");
-const metricAvg           = document.querySelector("#metricAvg");
-const metricLow           = document.querySelector("#metricLow");
-const metricLowCount      = document.querySelector("#metricLowCount");
-const metricHigh          = document.querySelector("#metricHigh");
-const metricHighCount     = document.querySelector("#metricHighCount");
-const metricSectors       = document.querySelector("#metricSectors");
-const metricEmployees     = document.querySelector("#metricEmployees");
+const metricTotal      = document.querySelector("#metricTotal");
+const metricAvg        = document.querySelector("#metricAvg");
+const metricLow        = document.querySelector("#metricLow");
+const metricLowCount   = document.querySelector("#metricLowCount");
+const metricHigh       = document.querySelector("#metricHigh");
+const metricHighCount  = document.querySelector("#metricHighCount");
+const metricSectors    = document.querySelector("#metricSectors");
+const metricEmployees  = document.querySelector("#metricEmployees");
 
-// Modal
-const modalOverlay        = document.querySelector("#modalOverlay");
-const modalTitle          = document.querySelector("#modalTitle");
-const modalClose          = document.querySelector("#modalClose");
-const tabSector           = document.querySelector("#tabSector");
-const tabEmployee         = document.querySelector("#tabEmployee");
-const modalContentSector  = document.querySelector("#modalContentSector");
+const modalOverlay         = document.querySelector("#modalOverlay");
+const modalTitle           = document.querySelector("#modalTitle");
+const modalClose           = document.querySelector("#modalClose");
+const tabSector            = document.querySelector("#tabSector");
+const tabEmployee          = document.querySelector("#tabEmployee");
+const modalContentSector   = document.querySelector("#modalContentSector");
 const modalContentEmployee = document.querySelector("#modalContentEmployee");
+
+// ---------------------------------------------------------------------------
+// Modal — listeners configurados imediatamente, não dentro do boot
+// ---------------------------------------------------------------------------
+function openModal() {
+  modalOverlay.classList.add("modal-open");
+  document.body.style.overflow = "hidden";
+}
+
+function closeModal() {
+  modalOverlay.classList.remove("modal-open");
+  document.body.style.overflow = "";
+}
+
+// Fecha pelo botão X
+modalClose?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  closeModal();
+});
+
+// Fecha clicando fora do box
+modalOverlay?.addEventListener("click", (e) => {
+  if (e.target === modalOverlay) closeModal();
+});
+
+// Fecha com Escape
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeModal();
+});
+
+// Abas do modal
+tabSector?.addEventListener("click", () => {
+  tabSector.classList.add("active");
+  tabEmployee.classList.remove("active");
+  modalContentSector.hidden = false;
+  modalContentEmployee.hidden = true;
+});
+
+tabEmployee?.addEventListener("click", () => {
+  tabEmployee.classList.add("active");
+  tabSector.classList.remove("active");
+  modalContentEmployee.hidden = false;
+  modalContentSector.hidden = true;
+});
 
 // ---------------------------------------------------------------------------
 // State
@@ -74,9 +116,7 @@ const state = {
 // Boot
 // ---------------------------------------------------------------------------
 const authed = await checkAuth();
-if (authed) {
-  boot();
-}
+if (authed) boot();
 
 async function boot() {
   await loadConfig();
@@ -120,36 +160,18 @@ function setupEventListeners() {
     window.location.href = "/login";
   });
 
-  // KPI clickable cards — low/high level
-  document.querySelector("#kpiLow")?.addEventListener("click", () => openRankingModal("low", "Ranking — Nível Baixo (😡 Péssimo + 😕 Ruim)"));
-  document.querySelector("#kpiHigh")?.addEventListener("click", () => openRankingModal("high", "Ranking — Nível Alto (🙂 Bom + 😍 Excelente)"));
+  // KPI clickable cards
+  document.querySelector("#kpiLow")?.addEventListener("click", () =>
+    openRankingModal("low", "Ranking — Nível Baixo (😡 Péssimo + 😕 Ruim)"));
+  document.querySelector("#kpiHigh")?.addEventListener("click", () =>
+    openRankingModal("high", "Ranking — Nível Alto (🙂 Bom + 😍 Excelente)"));
 
-  // Score distribution cards
   document.querySelectorAll(".score-dist-card.kpi-clickable").forEach((card) => {
     card.addEventListener("click", () => {
       const score = card.dataset.score;
       const labels = { 1: "😡 Péssimo", 2: "😕 Ruim", 3: "😐 Neutro", 4: "🙂 Bom", 5: "😍 Excelente" };
       openRankingModal(score, `Ranking — ${labels[score] || score}`);
     });
-  });
-
-  // Modal close
-  modalClose?.addEventListener("click", closeModal);
-  modalOverlay?.addEventListener("click", (e) => { if (e.target === modalOverlay) closeModal(); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
-
-  tabSector?.addEventListener("click", () => {
-    tabSector.classList.add("active");
-    tabEmployee.classList.remove("active");
-    modalContentSector.hidden = false;
-    modalContentEmployee.hidden = true;
-  });
-
-  tabEmployee?.addEventListener("click", () => {
-    tabEmployee.classList.add("active");
-    tabSector.classList.remove("active");
-    modalContentEmployee.hidden = false;
-    modalContentSector.hidden = true;
   });
 }
 
@@ -188,7 +210,6 @@ async function loadEmployees() {
 async function refreshDashboard() {
   const query = buildQuery();
   if (exportButton) exportButton.href = `/api/dashboard/export.csv${query ? `?${query}` : ""}`;
-
   const { dashboard } = await fetchJson(`/api/dashboard${query ? `?${query}` : ""}`);
   renderKpis(dashboard.summary, dashboard.scoreDistribution);
   renderCharts(dashboard);
@@ -199,9 +220,9 @@ async function refreshDashboard() {
 
 function buildQuery() {
   const params = new URLSearchParams();
-  if (state.filterSectorId) params.set("sectorId", state.filterSectorId);
-  if (state.filterStartDate) params.set("startDate", state.filterStartDate);
-  if (state.filterEndDate) params.set("endDate", state.filterEndDate);
+  if (state.filterSectorId)  params.set("sectorId",   state.filterSectorId);
+  if (state.filterStartDate) params.set("startDate",  state.filterStartDate);
+  if (state.filterEndDate)   params.set("endDate",    state.filterEndDate);
   return params.toString();
 }
 
@@ -210,21 +231,18 @@ function buildQuery() {
 // ---------------------------------------------------------------------------
 function renderKpis(summary, dist) {
   if (metricTotal) metricTotal.textContent = summary.totalResponses || "0";
-  if (metricAvg) metricAvg.textContent = summary.averageOverall ? `${summary.averageOverall}/5` : "--";
-
-  if (metricLow) metricLow.textContent = `${dist.lowPercent}%`;
-  if (metricLowCount) metricLowCount.textContent = `${dist.lowCount} respostas`;
-  if (metricHigh) metricHigh.textContent = `${dist.highPercent}%`;
+  if (metricAvg)   metricAvg.textContent   = summary.averageOverall ? `${summary.averageOverall}/5` : "--";
+  if (metricLow)   metricLow.textContent   = `${dist.lowPercent}%`;
+  if (metricLowCount)  metricLowCount.textContent  = `${dist.lowCount} respostas`;
+  if (metricHigh)  metricHigh.textContent  = `${dist.highPercent}%`;
   if (metricHighCount) metricHighCount.textContent = `${dist.highCount} respostas`;
 
-  // Score distribution counts
   for (let i = 1; i <= 5; i++) {
-    const el = document.querySelector(`#count${i}`);
-    if (el) el.textContent = dist.counts[i] || 0;
-
+    const el   = document.querySelector(`#count${i}`);
     const card = document.querySelector(`#kpi${i}`);
+    if (el)   el.textContent = dist.counts[i] || 0;
     if (card) {
-      card.classList.toggle("kpi-active-low", i <= 2 && dist.counts[i] > 0);
+      card.classList.toggle("kpi-active-low",  i <= 2 && dist.counts[i] > 0);
       card.classList.toggle("kpi-active-high", i >= 4 && dist.counts[i] > 0);
     }
   }
@@ -234,22 +252,14 @@ function renderKpis(summary, dist) {
 // Charts
 // ---------------------------------------------------------------------------
 const CHART_COLORS = {
-  accent: "#0E2E9B",
-  success: "#00965e",
-  warn: "#E8A300",
-  danger: "#D63B2F",
-  neutral: "#8A93B4",
-  grid: "rgba(14,46,155,0.08)",
-  text: "rgba(0,9,40,0.6)",
+  accent: "#0E2E9B", success: "#00965e", warn: "#E8A300",
+  danger: "#D63B2F", neutral: "#8A93B4",
+  grid: "rgba(14,46,155,0.08)", text: "rgba(0,9,40,0.6)",
 };
-
-const SCORE_COLORS = ["#D63B2F", "#E8A300", "#8A93B4", "#3BA35B", "#00965e"];
+const SCORE_COLORS = ["#D63B2F","#E8A300","#8A93B4","#3BA35B","#00965e"];
 
 function destroyChart(key) {
-  if (state.charts[key]) {
-    state.charts[key].destroy();
-    delete state.charts[key];
-  }
+  if (state.charts[key]) { state.charts[key].destroy(); delete state.charts[key]; }
 }
 
 function renderCharts(dashboard) {
@@ -262,28 +272,19 @@ function renderCharts(dashboard) {
 function renderTrendChart(trend) {
   destroyChart("trend");
   if (!trend.length) return;
-  const labels = trend.map((d) => formatDay(d.day));
   state.charts.trend = new Chart(trendCanvas, {
     type: "line",
     data: {
-      labels,
+      labels: trend.map((d) => formatDay(d.day)),
       datasets: [
-        {
-          label: "Respostas",
-          data: trend.map((d) => d.responses),
-          borderColor: CHART_COLORS.accent,
-          backgroundColor: "rgba(14,46,155,0.08)",
+        { label: "Respostas", data: trend.map((d) => d.responses),
+          borderColor: CHART_COLORS.accent, backgroundColor: "rgba(14,46,155,0.08)",
           tension: 0.4, fill: true, yAxisID: "yCount",
-          pointBackgroundColor: CHART_COLORS.accent, pointRadius: 4,
-        },
-        {
-          label: "Média",
-          data: trend.map((d) => d.averageScore),
-          borderColor: CHART_COLORS.success,
-          backgroundColor: "transparent",
-          tension: 0.4, borderDash: [5, 4], yAxisID: "yScore",
-          pointBackgroundColor: CHART_COLORS.success, pointRadius: 4,
-        },
+          pointBackgroundColor: CHART_COLORS.accent, pointRadius: 4 },
+        { label: "Média", data: trend.map((d) => d.averageScore),
+          borderColor: CHART_COLORS.success, backgroundColor: "transparent",
+          tension: 0.4, borderDash: [5,4], yAxisID: "yScore",
+          pointBackgroundColor: CHART_COLORS.success, pointRadius: 4 },
       ],
     },
     options: {
@@ -291,16 +292,10 @@ function renderTrendChart(trend) {
       plugins: { legend: { labels: { color: CHART_COLORS.text, font: { family: "Manrope" } } } },
       scales: {
         x: { grid: { color: CHART_COLORS.grid }, ticks: { color: CHART_COLORS.text, font: { family: "Manrope" } } },
-        yCount: {
-          type: "linear", position: "left",
-          grid: { color: CHART_COLORS.grid },
-          ticks: { color: CHART_COLORS.text, font: { family: "Manrope" }, stepSize: 1 },
-        },
-        yScore: {
-          type: "linear", position: "right", min: 0, max: 5,
-          grid: { display: false },
-          ticks: { color: CHART_COLORS.success, font: { family: "Manrope" } },
-        },
+        yCount: { type: "linear", position: "left", grid: { color: CHART_COLORS.grid },
+          ticks: { color: CHART_COLORS.text, font: { family: "Manrope" }, stepSize: 1 } },
+        yScore: { type: "linear", position: "right", min: 0, max: 5, grid: { display: false },
+          ticks: { color: CHART_COLORS.success, font: { family: "Manrope" } } },
       },
     },
   });
@@ -309,17 +304,13 @@ function renderTrendChart(trend) {
 function renderSectorChart(bySector) {
   destroyChart("sector");
   if (!bySector.length) return;
-  const sorted = [...bySector].sort((a, b) => b.responses - a.responses).slice(0, 8);
+  const sorted = [...bySector].sort((a,b) => b.responses - a.responses).slice(0,8);
   state.charts.sector = new Chart(sectorCanvas, {
     type: "bar",
     data: {
       labels: sorted.map((r) => r.label),
-      datasets: [{
-        label: "Respostas",
-        data: sorted.map((r) => r.responses),
-        backgroundColor: sorted.map((_, i) => `hsla(${225 + i * 15},60%,45%,0.8)`),
-        borderRadius: 8,
-      }],
+      datasets: [{ label: "Respostas", data: sorted.map((r) => r.responses),
+        backgroundColor: sorted.map((_,i) => `hsla(${225+i*15},60%,45%,0.8)`), borderRadius: 8 }],
     },
     options: {
       responsive: true, maintainAspectRatio: false, indexAxis: "y",
@@ -335,37 +326,27 @@ function renderSectorChart(bySector) {
 function renderAvgSectorChart(bySector) {
   destroyChart("avgSector");
   if (!bySector.length) return;
-  const sorted = [...bySector]
-    .filter((r) => r.average_score !== null)
-    .sort((a, b) => (b.average_score || 0) - (a.average_score || 0))
-    .slice(0, 8);
-
+  const sorted = [...bySector].filter((r) => r.average_score !== null)
+    .sort((a,b) => (b.average_score||0)-(a.average_score||0)).slice(0,8);
   state.charts.avgSector = new Chart(avgSectorCanvas, {
     type: "bar",
     data: {
       labels: sorted.map((r) => r.label),
-      datasets: [{
-        label: "Média",
-        data: sorted.map((r) => r.average_score),
+      datasets: [{ label: "Média", data: sorted.map((r) => r.average_score),
         backgroundColor: sorted.map((r) => {
-          const s = r.average_score || 0;
-          if (s >= 4) return "rgba(0,150,94,0.8)";
-          if (s >= 3) return "rgba(14,46,155,0.7)";
-          if (s >= 2) return "rgba(232,163,0,0.8)";
+          const s = r.average_score||0;
+          if (s>=4) return "rgba(0,150,94,0.8)";
+          if (s>=3) return "rgba(14,46,155,0.7)";
+          if (s>=2) return "rgba(232,163,0,0.8)";
           return "rgba(214,59,47,0.8)";
-        }),
-        borderRadius: 8,
-      }],
+        }), borderRadius: 8 }],
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
         x: { grid: { display: false }, ticks: { color: CHART_COLORS.text, font: { family: "Manrope", size: 11 } } },
-        y: {
-          min: 0, max: 5, grid: { color: CHART_COLORS.grid },
-          ticks: { color: CHART_COLORS.text, font: { family: "Manrope" } },
-        },
+        y: { min: 0, max: 5, grid: { color: CHART_COLORS.grid }, ticks: { color: CHART_COLORS.text, font: { family: "Manrope" } } },
       },
     },
   });
@@ -373,50 +354,40 @@ function renderAvgSectorChart(bySector) {
 
 function renderDistChart(dist) {
   destroyChart("dist");
-  const labels = ["😡 Péssimo", "😕 Ruim", "😐 Neutro", "🙂 Bom", "😍 Excelente"];
-  const data = [dist.counts[1], dist.counts[2], dist.counts[3], dist.counts[4], dist.counts[5]];
+  const labels = ["😡 Péssimo","😕 Ruim","😐 Neutro","🙂 Bom","😍 Excelente"];
+  const data   = [dist.counts[1],dist.counts[2],dist.counts[3],dist.counts[4],dist.counts[5]];
   state.charts.dist = new Chart(distCanvas, {
     type: "doughnut",
-    data: {
-      labels,
-      datasets: [{
-        data,
-        backgroundColor: SCORE_COLORS,
-        borderWidth: 2, borderColor: "#ffffff",
-      }],
-    },
+    data: { labels, datasets: [{ data, backgroundColor: SCORE_COLORS, borderWidth: 2, borderColor: "#ffffff" }] },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { position: "right", labels: { color: CHART_COLORS.text, font: { family: "Manrope" }, padding: 14, boxWidth: 14 } },
-      },
+      plugins: { legend: { position: "right",
+        labels: { color: CHART_COLORS.text, font: { family: "Manrope" }, padding: 14, boxWidth: 14 } } },
     },
   });
 }
 
 // ---------------------------------------------------------------------------
-// Employee breakdown / signals / comments
+// Employee breakdown / signals / comments / employees list
 // ---------------------------------------------------------------------------
 function renderEmployeeBreakdown(rows) {
   if (!rows.length) {
     breakdownEmployees.innerHTML = `<p class="empty-state">Os destaques aparecem após as primeiras respostas.</p>`;
     return;
   }
-  breakdownEmployees.innerHTML = rows
-    .map((row) => `
-      <article class="bar-row">
-        <div class="bar-row-copy">
-          <strong>${escapeHtml(row.label)}</strong>
-          <span>${escapeHtml(row.sectorName)} · ${row.responses} resposta(s)</span>
-        </div>
-        <div class="bar-row-meter">
-          <span style="width:${((row.average_score ?? 0) / 5) * 100}%;background:${scoreColor(row.average_score)}"></span>
-        </div>
-        <strong style="min-width:40px;text-align:right;color:${scoreColor(row.average_score)}">
-          ${row.average_score ?? "--"}/5
-        </strong>
-      </article>`)
-    .join("");
+  breakdownEmployees.innerHTML = rows.map((row) => `
+    <article class="bar-row">
+      <div class="bar-row-copy">
+        <strong>${escapeHtml(row.label)}</strong>
+        <span>${escapeHtml(row.sectorName)} · ${row.responses} resposta(s)</span>
+      </div>
+      <div class="bar-row-meter">
+        <span style="width:${((row.average_score??0)/5)*100}%;background:${scoreColor(row.average_score)}"></span>
+      </div>
+      <strong style="min-width:40px;text-align:right;color:${scoreColor(row.average_score)}">
+        ${row.average_score??'--'}/5
+      </strong>
+    </article>`).join("");
 }
 
 function renderSignals(rows) {
@@ -424,14 +395,12 @@ function renderSignals(rows) {
     signalsList.innerHTML = `<p class="empty-state">Nenhum sinal crítico identificado.</p>`;
     return;
   }
-  signalsList.innerHTML = rows
-    .map((row) => `
-      <article class="signal-item">
-        <strong>${escapeHtml(row.employeeName || "Sem funcionário")}</strong>
-        <span>${escapeHtml(row.sectorName)}</span>
-        <p>${row.lowScoreCount} resposta(s) com nota ≤ 2</p>
-      </article>`)
-    .join("");
+  signalsList.innerHTML = rows.map((row) => `
+    <article class="signal-item">
+      <strong>${escapeHtml(row.employeeName || "Sem funcionário")}</strong>
+      <span>${escapeHtml(row.sectorName)}</span>
+      <p>${row.lowScoreCount} resposta(s) com nota ≤ 2</p>
+    </article>`).join("");
 }
 
 function renderComments(comments) {
@@ -439,19 +408,17 @@ function renderComments(comments) {
     commentsList.innerHTML = `<p class="empty-state">Os comentários recentes aparecerão quando começarem a chegar respostas.</p>`;
     return;
   }
-  commentsList.innerHTML = comments
-    .map((c) => `
-      <article class="comment-card">
-        <div class="comment-header">
-          <strong>${escapeHtml(c.employeeName || "Sem funcionário")}</strong>
-          <span style="color:${scoreColor(c.overallScore)}">
-            ${scoreEmoji(c.overallScore)} ${c.overallScore ?? "--"}/5 · ${escapeHtml(c.sectorName)}
-          </span>
-        </div>
-        <p>${escapeHtml(c.comment)}</p>
-        <small>${escapeHtml(c.customerName || "Sem nome")} · ${new Date(c.createdAt).toLocaleString("pt-BR")}</small>
-      </article>`)
-    .join("");
+  commentsList.innerHTML = comments.map((c) => `
+    <article class="comment-card">
+      <div class="comment-header">
+        <strong>${escapeHtml(c.employeeName || "Sem funcionário")}</strong>
+        <span style="color:${scoreColor(c.overallScore)}">
+          ${scoreEmoji(c.overallScore)} ${c.overallScore??'--'}/5 · ${escapeHtml(c.sectorName)}
+        </span>
+      </div>
+      <p>${escapeHtml(c.comment)}</p>
+      <small>${escapeHtml(c.customerName||"Sem nome")} · ${new Date(c.createdAt).toLocaleString("pt-BR")}</small>
+    </article>`).join("");
 }
 
 function renderEmployees(employees) {
@@ -465,39 +432,35 @@ function renderEmployees(employees) {
     return acc;
   }, {});
 
-  employeesList.innerHTML = Object.entries(grouped)
-    .map(([sectorName, list]) => `
-      <section class="employees-group">
-        <h4>${escapeHtml(sectorName)}</h4>
-        <div class="employees-row">
-          ${list.map((e) => `
-            <article class="employee-card">
-              <div>
-                <strong>${escapeHtml(e.name)}</strong>
-                <p>${escapeHtml(e.role || "Atendimento")}</p>
-              </div>
-              <div class="employee-card-meta">
-                <span>${e.responseCount} resposta(s)</span>
-                <span style="color:${scoreColor(e.averageScore)}">${e.averageScore ? `${e.averageScore}/5` : "Sem média"}</span>
-              </div>
-              <button class="ghost-button small" data-employee-id="${e.id}">Remover</button>
-            </article>`).join("")}
-        </div>
-      </section>`)
-    .join("");
+  employeesList.innerHTML = Object.entries(grouped).map(([sectorName, list]) => `
+    <section class="employees-group">
+      <h4>${escapeHtml(sectorName)}</h4>
+      <div class="employees-row">
+        ${list.map((e) => `
+          <article class="employee-card">
+            <div>
+              <strong>${escapeHtml(e.name)}</strong>
+              <p>${escapeHtml(e.role || "Atendimento")}</p>
+            </div>
+            <div class="employee-card-meta">
+              <span>${e.responseCount} resposta(s)</span>
+              <span style="color:${scoreColor(e.averageScore)}">${e.averageScore ? `${e.averageScore}/5` : "Sem média"}</span>
+            </div>
+            <button class="ghost-button small" data-employee-id="${e.id}">Remover</button>
+          </article>`).join("")}
+      </div>
+    </section>`).join("");
 
   employeesList.querySelectorAll("[data-employee-id]").forEach((btn) => {
     btn.addEventListener("click", async () => {
-      const id = btn.dataset.employeeId;
+      const id  = btn.dataset.employeeId;
       const emp = state.employees.find((e) => String(e.id) === String(id));
       if (!emp || !confirm(`Remover ${emp.name} do setor ${emp.sectorName}?`)) return;
       try {
         await fetchJson(`/api/employees/${id}`, { method: "DELETE" });
         await loadEmployees();
         await refreshDashboard();
-      } catch (err) {
-        alert(err.message || "Não foi possível remover.");
-      }
+      } catch (err) { alert(err.message || "Não foi possível remover."); }
     });
   });
 }
@@ -526,32 +489,31 @@ async function handleCreateEmployee(event) {
 // ---------------------------------------------------------------------------
 async function openRankingModal(type, title) {
   modalTitle.textContent = title;
-  modalContentSector.innerHTML = `<p class="empty-state">Carregando...</p>`;
+  modalContentSector.innerHTML   = `<p class="empty-state">Carregando...</p>`;
   modalContentEmployee.innerHTML = `<p class="empty-state">Carregando...</p>`;
-  modalOverlay.hidden = false;
-  document.body.style.overflow = "hidden";
 
   // Reset tabs
   tabSector.classList.add("active");
   tabEmployee.classList.remove("active");
-  modalContentSector.hidden = false;
+  modalContentSector.hidden   = false;
   modalContentEmployee.hidden = true;
+
+  openModal();
 
   try {
     const query = new URLSearchParams({ type });
-    if (state.filterSectorId) query.set("sectorId", state.filterSectorId);
+    if (state.filterSectorId)  query.set("sectorId",  state.filterSectorId);
     if (state.filterStartDate) query.set("startDate", state.filterStartDate);
-    if (state.filterEndDate) query.set("endDate", state.filterEndDate);
-
+    if (state.filterEndDate)   query.set("endDate",   state.filterEndDate);
     const { ranking } = await fetchJson(`/api/dashboard/ranking?${query.toString()}`);
-    renderRankingContent(modalContentSector, ranking.bySector, "setor", "category");
-    renderRankingContent(modalContentEmployee, ranking.byEmployee, "colaborador", "sector_name");
+    renderRankingContent(modalContentSector,   ranking.bySector,    "category");
+    renderRankingContent(modalContentEmployee, ranking.byEmployee,  "sector_name");
   } catch (err) {
     modalContentSector.innerHTML = `<p class="empty-state">Erro: ${err.message}</p>`;
   }
 }
 
-function renderRankingContent(container, rows, tipo, subtitleKey) {
+function renderRankingContent(container, rows, subtitleKey) {
   if (!rows.length) {
     container.innerHTML = `<p class="empty-state">Sem dados para exibir.</p>`;
     return;
@@ -559,39 +521,34 @@ function renderRankingContent(container, rows, tipo, subtitleKey) {
   const maxResponses = Math.max(...rows.map((r) => r.responses), 1);
   container.innerHTML = rows.map((row, i) => `
     <article class="ranking-row">
-      <span class="ranking-pos">${i + 1}</span>
+      <span class="ranking-pos">${i+1}</span>
       <div class="ranking-info">
         <strong>${escapeHtml(row.label)}</strong>
-        <span>${escapeHtml(row[subtitleKey] || "")}</span>
+        <span>${escapeHtml(row[subtitleKey]||"")}</span>
       </div>
       <div class="ranking-bar-wrap">
         <div class="ranking-bar">
-          <span style="width:${(row.responses / maxResponses) * 100}%;background:${scoreColor(row.average_score)}"></span>
+          <span style="width:${(row.responses/maxResponses)*100}%;background:${scoreColor(row.average_score)}"></span>
         </div>
         <span class="ranking-count">${row.responses} resp.</span>
       </div>
       <strong class="ranking-score" style="color:${scoreColor(row.average_score)}">
-        ${scoreEmoji(row.average_score)} ${row.average_score ?? "--"}/5
+        ${scoreEmoji(row.average_score)} ${row.average_score??'--'}/5
       </strong>
     </article>`).join("");
-}
-
-function closeModal() {
-  modalOverlay.hidden = true;
-  document.body.style.overflow = "";
 }
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-function populateSectorSelect(selectEl, sectors, { includeAll = false, placeholder = "" } = {}) {
+function populateSectorSelect(selectEl, sectors, { includeAll=false, placeholder="" }={}) {
   if (!selectEl) return;
   const prefix = includeAll ? `<option value="">Todos</option>` : placeholder ? `<option value="">${placeholder}</option>` : "";
   selectEl.innerHTML = prefix + sectors.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
 }
 
 function scoreColor(score) {
-  if (score === null || score === undefined) return "#8A93B4";
+  if (score == null) return "#8A93B4";
   if (score >= 4.5) return "#00965e";
   if (score >= 3.5) return "#3BA35B";
   if (score >= 2.5) return "#0E2E9B";
@@ -600,7 +557,7 @@ function scoreColor(score) {
 }
 
 function scoreEmoji(score) {
-  if (score === null || score === undefined) return "";
+  if (score == null) return "";
   if (score >= 4.5) return "😍";
   if (score >= 3.5) return "🙂";
   if (score >= 2.5) return "😐";
@@ -610,30 +567,25 @@ function scoreEmoji(score) {
 
 function formatDay(day) {
   if (!day) return "";
-  const [, m, d] = day.split("-");
+  const [,m,d] = day.split("-");
   return `${d}/${m}`;
 }
 
 function escapeHtml(value) {
   if (value == null) return "";
   return String(value)
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
 }
 
-async function fetchJson(url, options = {}) {
-  // Add auth header from sessionStorage as fallback (cookie is primary)
+async function fetchJson(url, options={}) {
   const token = sessionStorage.getItem("auth_token");
-  if (token && options.headers === undefined) {
-    options.headers = { Authorization: `Bearer ${token}` };
-  } else if (token && options.headers && !options.headers.Authorization) {
-    options.headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    options.headers = options.headers || {};
+    if (!options.headers.Authorization) options.headers.Authorization = `Bearer ${token}`;
   }
   const response = await fetch(url, options);
-  if (response.status === 401) {
-    window.location.href = "/login";
-    throw new Error("Não autenticado");
-  }
+  if (response.status === 401) { window.location.href = "/login"; throw new Error("Não autenticado"); }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.error || "Falha na requisição.");
   return payload;
