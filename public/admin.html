@@ -164,16 +164,16 @@
           </article>
         </section>
 
-        <!-- ── Employee Management ── -->
-        <section class="dashboard-grid" id="employees" style="margin-bottom:20px;">
-          <article class="workspace-panel">
-            <div class="panel-heading">
-              <div><p class="eyebrow">QR Code</p><h3>Acesso unificado da avaliação</h3></div>
+        <!-- ── QR Code ── -->
+        <section class="workspace-panel" id="employees" style="margin-bottom:20px;">
+          <div class="panel-heading">
+            <div><p class="eyebrow">QR Code</p><h3>Acesso unificado da avaliação</h3></div>
+          </div>
+          <div class="qr-panel qr-panel-wide">
+            <div class="qr-wrap large">
+              <img id="qrImage" src="/api/qr" alt="QR code" />
             </div>
-            <div class="qr-panel">
-              <div class="qr-wrap large">
-                <img id="qrImage" src="/api/qr" alt="QR code" />
-              </div>
+            <div class="qr-panel-info">
               <label class="link-box">
                 <span>Link público</span>
                 <input type="text" id="surveyLink" readonly />
@@ -184,51 +184,25 @@
                 <a class="ghost-button small" href="/api/qr" download="experiencia-objetiva-qr.svg">Baixar QR</a>
               </div>
             </div>
-          </article>
-
-          <article class="workspace-panel">
-            <div class="panel-heading">
-              <div><p class="eyebrow">Cadastro</p><h3>Novo funcionário</h3></div>
-            </div>
-            <form class="point-form" id="employeeForm">
-              <label>
-                <span>Nome do funcionário</span>
-                <input type="text" name="name" placeholder="Ex.: Maria Silva" required />
-              </label>
-              <label>
-                <span>Setor</span>
-                <select name="sectorId" id="employeeFormSector" required>
-                  <option value="">Selecione</option>
-                </select>
-              </label>
-              <label class="full-span">
-                <span>Função (opcional)</span>
-                <input type="text" name="role" placeholder="Ex.: Vendedor(a) de balcão" />
-              </label>
-              <button class="primary-button" type="submit">Cadastrar funcionário</button>
-              <p class="form-feedback" id="employeeFormFeedback" role="status" aria-live="polite"></p>
-            </form>
-          </article>
+          </div>
         </section>
 
-        <!-- ── Employees list + Rankings ── -->
-        <section class="dashboard-grid secondary" style="margin-bottom:20px;">
-          <article class="workspace-panel">
-            <div class="panel-heading">
-              <div><p class="eyebrow">Equipe</p><h3>Funcionários por setor</h3></div>
-            </div>
-            <div class="employees-grid" id="employeesList"></div>
-          </article>
-          <article class="workspace-panel">
-            <div class="panel-heading">
-              <div><p class="eyebrow">Destaques</p><h3>Top colaboradores</h3></div>
-            </div>
-            <div class="bar-list" id="breakdownEmployees"></div>
-            <div class="panel-heading" style="margin-top:24px;">
-              <div><p class="eyebrow">Alertas</p><h3>Sinais de notas baixas</h3></div>
-            </div>
-            <div class="signal-list" id="signalsList"></div>
-          </article>
+        <!-- ── Rankings ── -->
+        <section class="workspace-panel" style="margin-bottom:20px;">
+          <div class="dashboard-grid secondary" style="margin:0;">
+            <article>
+              <div class="panel-heading">
+                <div><p class="eyebrow">Destaques</p><h3>Top colaboradores</h3></div>
+              </div>
+              <div class="bar-list" id="breakdownEmployees"></div>
+            </article>
+            <article>
+              <div class="panel-heading">
+                <div><p class="eyebrow">Alertas</p><h3>Sinais de notas baixas</h3></div>
+              </div>
+              <div class="signal-list" id="signalsList"></div>
+            </article>
+          </div>
         </section>
 
         <!-- ── Comments ── -->

@@ -15,127 +15,128 @@ const sqlitePath = path.resolve(__dirname, "../data/experiencia-objetiva.sqlite"
 // Cascade sector seed — 10 leaf sectors
 // ---------------------------------------------------------------------------
 const SECTOR_SEED = [
+  // ── Comercial — Vendas ─────────────────────────────────────────────────
   {
     slug: "comercial-vendas", name: "Vendas", category: "Comercial",
     sortOrder: 1, employeesRequired: 1,
     questions: [
-      { text: "O atendente demonstrou conhecimento sobre os produtos/serviços?", reverse: false },
-      { text: "Você se sentiu bem orientado(a) durante a compra?", reverse: false },
-      { text: "O tempo de atendimento foi adequado?", reverse: false },
-      { text: "O atendente entendeu sua necessidade rapidamente?", reverse: false },
-      { text: "Foram apresentadas opções adequadas ao que você buscava?", reverse: false },
-      { text: "Houve pressão excessiva para fechar a venda?", reverse: true },
+      { text: "Como você avalia o conhecimento do atendente sobre produtos/serviços?", reverse: false },
+      { text: "Como você avalia a clareza das informações fornecidas?", reverse: false },
+      { text: "Como você avalia o tempo de atendimento?", reverse: false },
+      { text: "Como você avalia a capacidade de entender sua necessidade?", reverse: false },
+      { text: "Como você avalia a abordagem do atendente (sem pressão excessiva)?", reverse: false },
     ],
   },
+  // ── Comercial — Compras ────────────────────────────────────────────────
   {
     slug: "comercial-compras", name: "Compras", category: "Comercial",
     sortOrder: 2, employeesRequired: 1,
     questions: [
-      { text: "O atendente demonstrou conhecimento sobre os produtos disponíveis?", reverse: false },
-      { text: "Você foi bem atendido(a) durante o processo de compras?", reverse: false },
-      { text: "O tempo de atendimento foi adequado?", reverse: false },
-      { text: "As condições de pagamento foram bem explicadas?", reverse: false },
-      { text: "O processo de compra foi rápido e eficiente?", reverse: false },
-      { text: "Houve pressão excessiva durante a negociação?", reverse: true },
+      { text: "Como você avalia a clareza das solicitações de compra (quantidades, especificações, prazos)?", reverse: false },
+      { text: "Como você avalia a comunicação com o comprador (retorno, alinhamento)?", reverse: false },
+      { text: "Como você avalia o cumprimento dos acordos firmados?", reverse: false },
+      { text: "Como você avalia a condução das negociações (profissionalismo, transparência)?", reverse: false },
+      { text: "Como você avalia o relacionamento comercial de forma geral?", reverse: false },
     ],
   },
+  // ── Comercial — Caixa ─────────────────────────────────────────────────
   {
     slug: "comercial-caixa", name: "Caixa", category: "Comercial",
     sortOrder: 3, employeesRequired: 0,
     questions: [
-      { text: "O processo de pagamento foi rápido e sem erros?", reverse: false },
-      { text: "O atendente foi cordial e educado?", reverse: false },
-      { text: "Houve clareza nas informações (valores, troco, comprovante)?", reverse: false },
-      { text: "O sistema apresentou falhas durante o atendimento?", reverse: true },
-      { text: "O tempo na fila foi aceitável?", reverse: false },
-      { text: "Você recebeu corretamente o comprovante da transação?", reverse: false },
+      { text: "Como você avalia a agilidade no processo de pagamento?", reverse: false },
+      { text: "Como você avalia a cordialidade do atendente?", reverse: false },
+      { text: "Como você avalia a clareza nas informações de cobrança?", reverse: false },
+      { text: "Como você avalia o tempo de espera na fila?", reverse: false },
+      { text: "Como você avalia a eficiência geral do atendimento?", reverse: false },
     ],
   },
+  // ── Expedição — Interna ───────────────────────────────────────────────
   {
     slug: "expedicao-interna", name: "Expedição Interna (Balcão Loja)", category: "Expedição",
     sortOrder: 4, employeesRequired: 0,
     questions: [
-      { text: "Seu pedido estava separado corretamente?", reverse: false },
-      { text: "O tempo de espera para retirada foi satisfatório?", reverse: false },
-      { text: "O atendimento foi organizado e ágil?", reverse: false },
-      { text: "Houve conferência dos itens no momento da retirada?", reverse: false },
-      { text: "O local de retirada estava bem sinalizado?", reverse: false },
-      { text: "Os colaboradores demonstraram atenção durante o atendimento?", reverse: false },
+      { text: "Como você avalia o tempo de espera para retirada?", reverse: false },
+      { text: "Como você avalia a organização do setor?", reverse: false },
+      { text: "Como você avalia a precisão dos itens entregues?", reverse: false },
+      { text: "Como você avalia a cordialidade dos colaboradores?", reverse: false },
+      { text: "Como você avalia a facilidade de localização do setor?", reverse: false },
     ],
   },
+  // ── Expedição — Externa ───────────────────────────────────────────────
   {
     slug: "expedicao-externa", name: "Expedição Externa (Pátio/Filial-Park Sul)", category: "Expedição",
     sortOrder: 5, employeesRequired: 0,
     questions: [
-      { text: "O atendimento foi rápido no ponto de retirada?", reverse: false },
-      { text: "Houve facilidade para localizar e receber o pedido?", reverse: false },
-      { text: "Os colaboradores foram prestativos durante a entrega?", reverse: false },
-      { text: "O processo foi bem orientado (ex: onde parar, como retirar)?", reverse: false },
-      { text: "Houve organização na fila ou ordem de atendimento?", reverse: false },
-      { text: "O pedido foi entregue corretamente e sem avarias?", reverse: false },
+      { text: "Como você avalia a agilidade no atendimento?", reverse: false },
+      { text: "Como você avalia a organização do processo (fila/ordem)?", reverse: false },
+      { text: "Como você avalia a clareza das orientações?", reverse: false },
+      { text: "Como você avalia a cordialidade dos colaboradores?", reverse: false },
+      { text: "Como você avalia a precisão do pedido entregue?", reverse: false },
     ],
   },
+  // ── Entrega — Objetiva ────────────────────────────────────────────────
   {
     slug: "entrega-objetiva", name: "Objetiva", category: "Entrega",
     sortOrder: 6, employeesRequired: 0,
     questions: [
-      { text: "O prazo de entrega foi cumprido?", reverse: false },
-      { text: "O produto chegou em boas condições?", reverse: false },
-      { text: "O entregador foi educado e profissional?", reverse: false },
-      { text: "Você recebeu atualizações sobre o status da entrega?", reverse: false },
-      { text: "Houve facilidade para contato em caso de problema?", reverse: false },
-      { text: "A entrega ocorreu conforme combinado (horário/local)?", reverse: false },
+      { text: "Como você avalia o cumprimento do prazo?", reverse: false },
+      { text: "Como você avalia as condições do produto na entrega?", reverse: false },
+      { text: "Como você avalia a postura do entregador?", reverse: false },
+      { text: "Como você avalia a comunicação sobre o status da entrega?", reverse: false },
+      { text: "Como você avalia a experiência geral da entrega?", reverse: false },
     ],
   },
+  // ── Entrega — Freteiro ────────────────────────────────────────────────
   {
     slug: "entrega-freteiro", name: "Freteiro", category: "Entrega",
     sortOrder: 7, employeesRequired: 0,
     questions: [
-      { text: "O freteiro foi educado e profissional?", reverse: false },
-      { text: "O produto foi entregue em boas condições?", reverse: false },
-      { text: "A entrega ocorreu no prazo combinado?", reverse: false },
-      { text: "O freteiro respeitou as orientações de entrega?", reverse: false },
-      { text: "Houve facilidade para contato com o freteiro?", reverse: false },
-      { text: "A entrega foi realizada conforme combinado (local/horário)?", reverse: false },
+      { text: "Como você avalia o cumprimento do prazo?", reverse: false },
+      { text: "Como você avalia as condições do produto na entrega?", reverse: false },
+      { text: "Como você avalia a postura do entregador?", reverse: false },
+      { text: "Como você avalia a comunicação sobre o status da entrega?", reverse: false },
+      { text: "Como você avalia a experiência geral da entrega?", reverse: false },
     ],
   },
+  // ── Administrativo — Financeiro ───────────────────────────────────────
   {
     slug: "admin-financeiro", name: "Financeiro", category: "Administrativo",
     sortOrder: 8, employeesRequired: 0,
     questions: [
-      { text: "Suas solicitações financeiras foram resolvidas com eficiência?", reverse: false },
-      { text: "As informações sobre cobranças/pagamentos foram claras?", reverse: false },
-      { text: "O tempo de resposta foi satisfatório?", reverse: false },
-      { text: "Houve retorno dentro do prazo informado?", reverse: false },
-      { text: "O atendimento demonstrou profissionalismo?", reverse: false },
-      { text: "Seu problema financeiro foi resolvido na primeira interação?", reverse: false },
+      { text: "Como você avalia a clareza nas informações financeiras (boletos, cobranças, faturas)?", reverse: false },
+      { text: "Como você avalia o tempo de retorno às solicitações?", reverse: false },
+      { text: "Como você avalia a precisão das informações fornecidas?", reverse: false },
+      { text: "Como você avalia a facilidade de resolução de pendências?", reverse: false },
+      { text: "Como você avalia o atendimento do setor de forma geral?", reverse: false },
     ],
   },
+  // ── Administrativo — RH ───────────────────────────────────────────────
   {
     slug: "admin-rh", name: "RH", category: "Administrativo",
     sortOrder: 9, employeesRequired: 0,
     questions: [
-      { text: "O atendimento do RH foi cordial e prestativo?", reverse: false },
-      { text: "Suas dúvidas foram esclarecidas de forma clara?", reverse: false },
-      { text: "O processo foi conduzido com agilidade?", reverse: false },
-      { text: "As informações fornecidas foram precisas?", reverse: false },
-      { text: "O tempo de espera foi aceitável?", reverse: false },
-      { text: "Você se sentiu bem acolhido(a) durante o atendimento?", reverse: false },
+      { text: "Como você avalia a clareza das orientações fornecidas?", reverse: false },
+      { text: "Como você avalia o suporte prestado aos colaboradores?", reverse: false },
+      { text: "Como você avalia o tempo de resposta às solicitações?", reverse: false },
+      { text: "Como você avalia a disponibilidade para atendimento?", reverse: false },
+      { text: "Como você avalia o atendimento de forma geral?", reverse: false },
     ],
   },
+  // ── Administrativo — DP ───────────────────────────────────────────────
   {
     slug: "admin-dp", name: "DP", category: "Administrativo",
     sortOrder: 10, employeesRequired: 0,
     questions: [
-      { text: "O atendimento do DP foi cordial e prestativo?", reverse: false },
-      { text: "Suas solicitações foram atendidas corretamente?", reverse: false },
-      { text: "Os documentos e informações foram entregues no prazo?", reverse: false },
-      { text: "As explicações foram claras e objetivas?", reverse: false },
-      { text: "O processo burocrático foi facilitado pelo atendente?", reverse: false },
-      { text: "Você teve facilidade para resolver sua demanda?", reverse: false },
+      { text: "Como você avalia a precisão das informações (folha, benefícios, ponto)?", reverse: false },
+      { text: "Como você avalia o cumprimento de prazos (pagamentos, documentos)?", reverse: false },
+      { text: "Como você avalia a clareza nas orientações?", reverse: false },
+      { text: "Como você avalia o tempo de resposta?", reverse: false },
+      { text: "Como você avalia a eficiência na resolução de demandas?", reverse: false },
     ],
   },
 ];
+
 
 // ---------------------------------------------------------------------------
 // SQLite Schema
