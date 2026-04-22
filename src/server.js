@@ -20,9 +20,13 @@ const __dirname = path.dirname(__filename);
 const publicDir = path.resolve(__dirname, "../public");
 const configuredBaseUrl = process.env.PUBLIC_BASE_URL?.trim().replace(/\/+$/, "");
 
-// Admin credentials — .trim() removes Windows \r and accidental spaces from .env
-const ADMIN_EMAIL    = (process.env.ADMIN_EMAIL    || "admin@objetiva.com.br").trim();
-const ADMIN_PASSWORD = (process.env.ADMIN_PASSWORD || "Admin@2024").trim();
+// Limpa aspas, espaços e \r que hospedagens às vezes adicionam
+function cleanEnv(value) {
+  return String(value || "").trim().replace(/^["']|["']$/g, "");
+}
+
+const ADMIN_EMAIL    = cleanEnv(process.env.ADMIN_EMAIL)    || "admin@objetiva.com.br";
+const ADMIN_PASSWORD = cleanEnv(process.env.ADMIN_PASSWORD) || "Admin@2024";
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -37,9 +41,6 @@ function baseUrl(req) {
   return configuredBaseUrl || `${req.protocol}://${req.get("host")}`;
 }
 
-// ---------------------------------------------------------------------------
-// Auth helpers
-// ---------------------------------------------------------------------------
 function getSessionToken(req) {
   return req.cookies?.session_token || req.headers.authorization?.replace("Bearer ", "");
 }
@@ -52,15 +53,12 @@ async function authMiddleware(req, res, next) {
   next();
 }
 
-// ---------------------------------------------------------------------------
-// Email sender (nodemailer with fallback to console)
-// ---------------------------------------------------------------------------
 async function sendTfaEmail(email, code) {
-  const smtpHost = process.env.SMTP_HOST?.trim();
+  const smtpHost = cleanEnv(process.env.SMTP_HOST);
   const smtpPort = Number(process.env.SMTP_PORT || 587);
-  const smtpUser = process.env.SMTP_USER?.trim();
-  const smtpPass = process.env.SMTP_PASS;
-  const smtpFrom = process.env.SMTP_FROM?.trim() || `"Experiência Objetiva" <${ADMIN_EMAIL}>`;
+  const smtpUser = cleanEnv(process.env.SMTP_USER);
+  const smtpPass = process.env.SMTP_PASS || "";
+  const smtpFrom = cleanEnv(process.env.SMTP_FROM) || `"Experiência Objetiva" <${ADMIN_EMAIL}>`;
 
   if (smtpHost && smtpUser) {
     try {
@@ -71,18 +69,14 @@ async function sendTfaEmail(email, code) {
         auth: { user: smtpUser, pass: smtpPass },
       });
       await transporter.sendMail({
-        from: smtpFrom,
-        to: email,
+        from: smtpFrom, to: email,
         subject: "Código de verificação — Experiência Objetiva",
-        html: `
-          <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;">
-            <h2 style="color:#000928;margin-bottom:8px;">Código de verificação</h2>
-            <p style="color:#555;margin-bottom:24px;">Use o código abaixo para acessar o painel gerencial. Ele expira em <strong>10 minutos</strong>.</p>
-            <div style="background:#f2f5ff;border:1px solid #ccd4f0;border-radius:16px;padding:24px;text-align:center;margin-bottom:24px;">
-              <span style="font-size:2.8rem;font-weight:800;letter-spacing:0.2em;color:#0e2e9b;">${code}</span>
-            </div>
-            <p style="color:#888;font-size:0.85rem;">Se você não solicitou este código, ignore este e-mail.</p>
-          </div>`,
+        html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+          <h2 style="color:#000928;">Código de verificação</h2>
+          <p style="color:#555;">Expira em <strong>10 minutos</strong>.</p>
+          <div style="background:#f2f5ff;border-radius:16px;padding:24px;text-align:center;">
+            <span style="font-size:2.8rem;font-weight:800;letter-spacing:0.2em;color:#0e2e9b;">${code}</span>
+          </div></div>`,
       });
       return true;
     } catch (err) {
@@ -90,10 +84,8 @@ async function sendTfaEmail(email, code) {
     }
   }
 
-  // Fallback — mostra o código no console
   console.log(`\n  ┌──────────────────────────────────────────┐`);
   console.log(`  │  CÓDIGO 2FA                              │`);
-  console.log(`  │  E-mail : ${ADMIN_EMAIL.padEnd(30)}│`);
   console.log(`  │  Código : ${code.padEnd(30)}│`);
   console.log(`  └──────────────────────────────────────────┘\n`);
   return false;
@@ -103,12 +95,9 @@ async function sendTfaEmail(email, code) {
 // Public routes
 // ---------------------------------------------------------------------------
 app.get("/api/config", (req, res) => {
-  const databaseStatus = getDatabaseStatus();
-  res.json({
-    appName: "Experiência Objetiva",
-    storageMode, databaseReady: databaseStatus.ready, databaseError: databaseStatus.error,
-    surveyUrl: `${baseUrl(req)}/avaliar`, qrCodeUrl: `${baseUrl(req)}/api/qr`,
-  });
+  const s = getDatabaseStatus();
+  res.json({ appName: "Experiência Objetiva", storageMode, databaseReady: s.ready,
+    surveyUrl: `${baseUrl(req)}/avaliar`, qrCodeUrl: `${baseUrl(req)}/api/qr` });
 });
 
 app.get("/health", (_req, res) => {
@@ -132,9 +121,7 @@ app.post("/api/responses", async (req, res) => {
   try {
     const response = await saveResponse(req.body);
     res.status(201).json({ response, message: "Avaliação registrada com sucesso." });
-  } catch (e) {
-    res.status(400).json({ error: e.message || "Não foi possível salvar a avaliação." });
-  }
+  } catch (e) { res.status(400).json({ error: e.message || "Não foi possível salvar." }); }
 });
 
 app.get("/api/qr", async (req, res, next) => {
@@ -150,18 +137,32 @@ app.get("/api/qr", async (req, res, next) => {
 });
 
 // ---------------------------------------------------------------------------
-// Auth routes
+// Auth — rota de diagnóstico (remova em produção se desejar)
 // ---------------------------------------------------------------------------
-app.post("/api/auth/login", async (req, res) => {
-  const email    = String(req.body.email    || "").trim().toLowerCase();
-  const password = String(req.body.password || "").trim();
+app.get("/api/auth/check", (_req, res) => {
+  res.json({
+    emailConfigured: ADMIN_EMAIL,
+    passwordLength: ADMIN_PASSWORD.length,
+    passwordFirstChar: ADMIN_PASSWORD[0],
+    passwordLastChar: ADMIN_PASSWORD[ADMIN_PASSWORD.length - 1],
+  });
+});
 
-  if (!email || !password) {
+app.post("/api/auth/login", async (req, res) => {
+  const emailInput    = cleanEnv(req.body.email).toLowerCase();
+  const passwordInput = cleanEnv(req.body.password);
+
+  console.log(`[login] tentativa: email="${emailInput}" (${emailInput.length} chars) | senha (${passwordInput.length} chars)`);
+  console.log(`[login] esperado:  email="${ADMIN_EMAIL.toLowerCase()}" | senha (${ADMIN_PASSWORD.length} chars)`);
+
+  if (!emailInput || !passwordInput) {
     return res.status(400).json({ error: "Informe o e-mail e a senha." });
   }
 
-  const emailOk    = email    === ADMIN_EMAIL.toLowerCase();
-  const passwordOk = password === ADMIN_PASSWORD;
+  const emailOk    = emailInput    === ADMIN_EMAIL.toLowerCase();
+  const passwordOk = passwordInput === ADMIN_PASSWORD;
+
+  console.log(`[login] emailOk=${emailOk} | passwordOk=${passwordOk}`);
 
   if (!emailOk || !passwordOk) {
     return res.status(401).json({ error: "E-mail ou senha incorretos." });
@@ -170,13 +171,8 @@ app.post("/api/auth/login", async (req, res) => {
   try {
     const code = await createTfaCode();
     const emailSent = await sendTfaEmail(ADMIN_EMAIL, code);
-    res.json({
-      ok: true,
-      message: emailSent
-        ? `Código enviado para ${ADMIN_EMAIL}.`
-        : `Código gerado — verifique o terminal do servidor.`,
-      emailSent,
-    });
+    res.json({ ok: true, emailSent,
+      message: emailSent ? `Código enviado para ${ADMIN_EMAIL}.` : `Código gerado — verifique o terminal.` });
   } catch (e) {
     res.status(500).json({ error: "Erro ao gerar código de verificação." });
   }
@@ -184,7 +180,7 @@ app.post("/api/auth/login", async (req, res) => {
 
 app.post("/api/auth/verify-2fa", async (req, res) => {
   const { code } = req.body;
-  if (!code) return res.status(400).json({ error: "Informe o código de verificação." });
+  if (!code) return res.status(400).json({ error: "Informe o código." });
   const valid = await validateTfaCode(String(code).trim());
   if (!valid) return res.status(401).json({ error: "Código inválido ou expirado." });
   const session = await createSession();
@@ -217,35 +213,29 @@ app.get("/api/employees", authMiddleware, async (req, res, next) => {
 });
 
 app.post("/api/employees", authMiddleware, async (req, res) => {
-  try {
-    const employee = await createEmployee(req.body);
-    res.status(201).json({ employee });
-  } catch (e) {
-    res.status(400).json({ error: e.message || "Não foi possível cadastrar o funcionário." });
-  }
+  try { res.status(201).json({ employee: await createEmployee(req.body) }); }
+  catch (e) { res.status(400).json({ error: e.message }); }
 });
 
 app.delete("/api/employees/:id", authMiddleware, async (req, res) => {
   try { await deactivateEmployee(req.params.id); res.status(204).end(); }
-  catch (e) { res.status(400).json({ error: e.message || "Não foi possível remover o funcionário." }); }
+  catch (e) { res.status(400).json({ error: e.message }); }
 });
 
 app.get("/api/dashboard", authMiddleware, async (req, res, next) => {
   try {
-    const dashboard = await getDashboard({
+    res.json({ dashboard: await getDashboard({
       sectorId: req.query.sectorId, employeeId: req.query.employeeId,
       startDate: req.query.startDate, endDate: req.query.endDate,
-    });
-    res.json({ dashboard });
+    })});
   } catch (e) { next(e); }
 });
 
 app.get("/api/dashboard/ranking", authMiddleware, async (req, res, next) => {
   try {
-    const ranking = await getDashboardRanking(req.query.type, {
+    res.json({ ranking: await getDashboardRanking(req.query.type, {
       sectorId: req.query.sectorId, startDate: req.query.startDate, endDate: req.query.endDate,
-    });
-    res.json({ ranking });
+    })});
   } catch (e) { next(e); }
 });
 
@@ -262,27 +252,24 @@ app.get("/api/dashboard/export.csv", authMiddleware, async (req, res, next) => {
 });
 
 // ---------------------------------------------------------------------------
-// Page routes
+// Pages
 // ---------------------------------------------------------------------------
-app.get("/", (_req, res) => { res.sendFile(path.join(publicDir, "index.html")); });
-app.get("/login", (_req, res) => { res.sendFile(path.join(publicDir, "login.html")); });
-app.get("/gestao", (_req, res) => { res.sendFile(path.join(publicDir, "admin.html")); });
-app.get(["/avaliar", "/avaliar/:legacy"], (_req, res) => { res.sendFile(path.join(publicDir, "survey.html")); });
+app.get("/", (_req, res) => res.sendFile(path.join(publicDir, "index.html")));
+app.get("/login", (_req, res) => res.sendFile(path.join(publicDir, "login.html")));
+app.get("/gestao", (_req, res) => res.sendFile(path.join(publicDir, "admin.html")));
+app.get(["/avaliar", "/avaliar/:legacy"], (_req, res) => res.sendFile(path.join(publicDir, "survey.html")));
 
 app.use((error, req, res, _next) => {
   console.error(`[server] ${req.method} ${req.originalUrl}`, error);
-  res.status(500).json({ error: "Erro interno ao processar a solicitação.", detail: error?.message });
+  res.status(500).json({ error: "Erro interno.", detail: error?.message });
 });
 
 app.listen(port, () => {
   console.log(`\n  ┌──────────────────────────────────────────────┐`);
   console.log(`  │  Experiência Objetiva — Servidor iniciado    │`);
-  console.log(`  │  URL    : http://localhost:${port}              │`);
-  console.log(`  │  Login  : /login                             │`);
   console.log(`  │  E-mail : ${ADMIN_EMAIL.padEnd(34)}│`);
+  console.log(`  │  Senha  : ${"*".repeat(ADMIN_PASSWORD.length).padEnd(34)}│`);
+  console.log(`  │  Senha length: ${String(ADMIN_PASSWORD.length).padEnd(28)}│`);
   console.log(`  │  Storage: ${storageMode.padEnd(34)}│`);
   console.log(`  └──────────────────────────────────────────────┘\n`);
-  if (!process.env.SMTP_HOST) {
-    console.log("  ⚠  SMTP não configurado — códigos 2FA aparecerão aqui no terminal\n");
-  }
 });
