@@ -28,13 +28,13 @@
         <nav class="sidebar-nav">
           <a href="#kpis" class="sidebar-nav-link">KPIs</a>
           <a href="#charts" class="sidebar-nav-link">Gráficos</a>
-          <a href="#employees" class="sidebar-nav-link">Equipe</a>
+          <a href="#employees" class="sidebar-nav-link">QR Code</a>
           <a href="#comments" class="sidebar-nav-link">Comentários</a>
           <a href="/usuarios" class="sidebar-nav-link">Usuários</a>
         </nav>
         <div class="sidebar-section">
           <p class="mono-label">Acesso</p>
-          <p class="muted-text" id="authEmail" style="color:rgba(255,255,255,0.6);font-size:0.85rem;"></p>
+          <p id="authEmail" style="color:rgba(255,255,255,0.6);font-size:0.85rem;margin:0;"></p>
           <button class="ghost-button small" id="logoutBtn" type="button" style="margin-top:12px;width:100%;">Sair</button>
         </div>
       </aside>
@@ -65,7 +65,7 @@
           </div>
         </section>
 
-        <!-- ── Summary KPIs Row 1 ── -->
+        <!-- KPIs Linha 1 -->
         <section class="metrics-row" id="kpis">
           <article class="metric-card">
             <span>Total de respostas</span>
@@ -89,13 +89,9 @@
             <span>Setores ativos</span>
             <strong id="metricSectors">--</strong>
           </article>
-          <article class="metric-card">
-            <span>Funcionários</span>
-            <strong id="metricEmployees">--</strong>
-          </article>
         </section>
 
-        <!-- ── Score Distribution Row ── -->
+        <!-- Score Distribution -->
         <section class="score-dist-row" id="scoreDist">
           <p class="eyebrow" style="margin:0 0 14px;grid-column:1/-1;">Distribuição por avaliação — clique para ver ranking</p>
           <article class="score-dist-card kpi-clickable" data-score="1" id="kpi1">
@@ -125,7 +121,7 @@
           </article>
         </section>
 
-        <!-- ── Charts Row ── -->
+        <!-- Gráficos linha 1 -->
         <section class="dashboard-grid" id="charts" style="margin-bottom:20px;">
           <article class="workspace-panel">
             <div class="panel-heading">
@@ -145,7 +141,7 @@
           </article>
         </section>
 
-        <!-- ── Charts Row 2 ── -->
+        <!-- Gráficos linha 2 -->
         <section class="dashboard-grid" style="margin-bottom:20px;">
           <article class="workspace-panel">
             <div class="panel-heading">
@@ -165,7 +161,7 @@
           </article>
         </section>
 
-        <!-- ── QR Code ── -->
+        <!-- QR Code -->
         <section class="workspace-panel" id="employees" style="margin-bottom:20px;">
           <div class="panel-heading">
             <div><p class="eyebrow">QR Code</p><h3>Acesso unificado da avaliação</h3></div>
@@ -188,7 +184,7 @@
           </div>
         </section>
 
-        <!-- ── Rankings ── -->
+        <!-- Rankings -->
         <section class="workspace-panel" style="margin-bottom:20px;">
           <div class="dashboard-grid secondary" style="margin:0;">
             <article>
@@ -206,7 +202,7 @@
           </div>
         </section>
 
-        <!-- ── Comments ── -->
+        <!-- Comentários -->
         <section class="workspace-panel" id="comments" style="margin-bottom:28px;">
           <div class="panel-heading">
             <div><p class="eyebrow">Feedback aberto</p><h3>Comentários recentes</h3></div>
@@ -217,8 +213,8 @@
       </main>
     </div>
 
-    <!-- ── Ranking Modal ── -->
-    <div class="modal-overlay" id="modalOverlay" hidden>
+    <!-- Modal de Ranking — SEM hidden, controlado por classe CSS .modal-open -->
+    <div class="modal-overlay" id="modalOverlay">
       <div class="modal-box">
         <div class="modal-header">
           <h3 id="modalTitle">Ranking</h3>

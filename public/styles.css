@@ -355,11 +355,14 @@ button, input, select, textarea { font: inherit; }
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  padding: 16px 10px 14px;
+  padding: 15px 10px 13px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.84);
-  border: 1px solid var(--line);
-  transition: transform 180ms, box-shadow 180ms, border-color 180ms;
+  border: 2px solid var(--line);
+  transition: transform 180ms, box-shadow 180ms, border-color 180ms, background-color 180ms;
+  /* Tamanho fixo para todos os cards */
+  min-height: 110px;
+  justify-content: center;
 }
 
 .score-dist-card:hover { transform: translateY(-2px); box-shadow: 0 16px 32px rgba(14,46,155,0.12); }
@@ -368,9 +371,9 @@ button, input, select, textarea { font: inherit; }
 .score-label { font-size: 0.72rem; color: var(--text-soft); text-transform: uppercase; letter-spacing: 0.06em; text-align: center; }
 .score-count { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.05em; color: var(--accent-strong); }
 
-.kpi-active-low { border-color: var(--danger); background: rgba(214, 59, 47, 0.06); }
+.kpi-active-low { border-color: var(--danger) !important; background: rgba(214, 59, 47, 0.06); }
 .kpi-active-low .score-count { color: var(--danger); }
-.kpi-active-high { border-color: var(--success); background: rgba(0, 150, 94, 0.06); }
+.kpi-active-high { border-color: var(--success) !important; background: rgba(0, 150, 94, 0.06); }
 .kpi-active-high .score-count { color: var(--success); }
 
 /* ── Dashboard Grid ── */
@@ -672,16 +675,15 @@ textarea { resize: vertical; }
   inset: 0;
   background: rgba(0, 9, 40, 0.55);
   backdrop-filter: blur(6px);
-  align-items: center;
-  justify-content: center;
   z-index: 1000;
   padding: 16px;
-  /* Oculto por padrão — display:none sem depender do atributo hidden */
   display: none;
 }
 
 .modal-overlay.modal-open {
   display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .modal-box {
