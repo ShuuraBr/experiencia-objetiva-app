@@ -1,5 +1,8 @@
 @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap");
 
+/* Garante que hidden funcione mesmo com display:flex/grid no CSS */
+[hidden] { display: none !important; }
+
 :root {
   --bg: #f2f5ff;
   --bg-soft: rgba(242, 245, 255, 0.78);
