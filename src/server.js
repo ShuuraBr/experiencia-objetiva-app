@@ -20,9 +20,9 @@ const __dirname = path.dirname(__filename);
 const publicDir = path.resolve(__dirname, "../public");
 const configuredBaseUrl = process.env.PUBLIC_BASE_URL?.trim().replace(/\/+$/, "");
 
-// Admin credentials from env (change in production!)
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@objetiva.com.br";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "Admin@2024";
+// Admin credentials — .trim() removes Windows \r and accidental spaces from .env
+const ADMIN_EMAIL    = (process.env.ADMIN_EMAIL    || "admin@objetiva.com.br").trim();
+const ADMIN_PASSWORD = (process.env.ADMIN_PASSWORD || "Admin@2024").trim();
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -56,11 +56,11 @@ async function authMiddleware(req, res, next) {
 // Email sender (nodemailer with fallback to console)
 // ---------------------------------------------------------------------------
 async function sendTfaEmail(email, code) {
-  const smtpHost = process.env.SMTP_HOST;
+  const smtpHost = process.env.SMTP_HOST?.trim();
   const smtpPort = Number(process.env.SMTP_PORT || 587);
-  const smtpUser = process.env.SMTP_USER;
+  const smtpUser = process.env.SMTP_USER?.trim();
   const smtpPass = process.env.SMTP_PASS;
-  const smtpFrom = process.env.SMTP_FROM || `"Experiência Objetiva" <${ADMIN_EMAIL}>`;
+  const smtpFrom = process.env.SMTP_FROM?.trim() || `"Experiência Objetiva" <${ADMIN_EMAIL}>`;
 
   if (smtpHost && smtpUser) {
     try {
@@ -86,15 +86,16 @@ async function sendTfaEmail(email, code) {
       });
       return true;
     } catch (err) {
-      console.error("[auth] failed to send email:", err.message);
+      console.error("[auth] falha ao enviar e-mail:", err.message);
     }
   }
 
-  // Fallback: log to console
-  console.log(`\n  ┌─────────────────────────────────────┐`);
-  console.log(`  │  CÓDIGO 2FA PARA ${email.padEnd(20)}│`);
-  console.log(`  │  Código: ${code}                      │`);
-  console.log(`  └─────────────────────────────────────┘\n`);
+  // Fallback — mostra o código no console
+  console.log(`\n  ┌──────────────────────────────────────────┐`);
+  console.log(`  │  CÓDIGO 2FA                              │`);
+  console.log(`  │  E-mail : ${ADMIN_EMAIL.padEnd(30)}│`);
+  console.log(`  │  Código : ${code.padEnd(30)}│`);
+  console.log(`  └──────────────────────────────────────────┘\n`);
   return false;
 }
 
@@ -105,8 +106,6 @@ app.get("/api/config", (req, res) => {
   const databaseStatus = getDatabaseStatus();
   res.json({
     appName: "Experiência Objetiva",
-    description: "Sistema corporativo de avaliação da experiência do cliente.",
-    privacyNotice: "A avaliação é utilizada exclusivamente para melhoria dos serviços prestados, de forma interna e confidencial.",
     storageMode, databaseReady: databaseStatus.ready, databaseError: databaseStatus.error,
     surveyUrl: `${baseUrl(req)}/avaliar`, qrCodeUrl: `${baseUrl(req)}/api/qr`,
   });
@@ -154,21 +153,28 @@ app.get("/api/qr", async (req, res, next) => {
 // Auth routes
 // ---------------------------------------------------------------------------
 app.post("/api/auth/login", async (req, res) => {
-  const { email, password } = req.body;
+  const email    = String(req.body.email    || "").trim().toLowerCase();
+  const password = String(req.body.password || "").trim();
+
   if (!email || !password) {
     return res.status(400).json({ error: "Informe o e-mail e a senha." });
   }
-  if (email.trim().toLowerCase() !== ADMIN_EMAIL.toLowerCase() || password !== ADMIN_PASSWORD) {
+
+  const emailOk    = email    === ADMIN_EMAIL.toLowerCase();
+  const passwordOk = password === ADMIN_PASSWORD;
+
+  if (!emailOk || !passwordOk) {
     return res.status(401).json({ error: "E-mail ou senha incorretos." });
   }
+
   try {
     const code = await createTfaCode();
     const emailSent = await sendTfaEmail(ADMIN_EMAIL, code);
     res.json({
       ok: true,
       message: emailSent
-        ? `Código enviado para ${ADMIN_EMAIL}. Verifique sua caixa de entrada.`
-        : `Código gerado (verifique o console do servidor): ${code}`,
+        ? `Código enviado para ${ADMIN_EMAIL}.`
+        : `Código gerado — verifique o terminal do servidor.`,
       emailSent,
     });
   } catch (e) {
@@ -269,9 +275,14 @@ app.use((error, req, res, _next) => {
 });
 
 app.listen(port, () => {
-  console.log(`[server] listening on http://localhost:${port} (storage: ${storageMode})`);
-  console.log(`[auth] admin email: ${ADMIN_EMAIL}`);
+  console.log(`\n  ┌──────────────────────────────────────────────┐`);
+  console.log(`  │  Experiência Objetiva — Servidor iniciado    │`);
+  console.log(`  │  URL    : http://localhost:${port}              │`);
+  console.log(`  │  Login  : /login                             │`);
+  console.log(`  │  E-mail : ${ADMIN_EMAIL.padEnd(34)}│`);
+  console.log(`  │  Storage: ${storageMode.padEnd(34)}│`);
+  console.log(`  └──────────────────────────────────────────────┘\n`);
   if (!process.env.SMTP_HOST) {
-    console.log("[auth] SMTP não configurado — códigos 2FA serão exibidos no console");
+    console.log("  ⚠  SMTP não configurado — códigos 2FA aparecerão aqui no terminal\n");
   }
 });
