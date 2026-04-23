@@ -68,7 +68,7 @@ tabEmployee?.addEventListener("click", () => {
 // KPI clickable — registrados aqui para funcionar mesmo antes do dashboard carregar
 document.querySelector("#kpiLow")?.addEventListener("click",  () => openRankingModal("low",  "Ranking — Nível Baixo (😡 Péssimo + 😕 Ruim)"));
 document.querySelector("#kpiHigh")?.addEventListener("click", () => openRankingModal("high", "Ranking — Nível Alto (🙂 Bom + 😍 Excelente)"));
-document.querySelectorAll(".score-dist-card.kpi-clickable").forEach((card) => {
+document.querySelectorAll(".kpi-emoji-card.kpi-clickable").forEach((card) => {
   card.addEventListener("click", () => {
     const labels = { 1:"😡 Péssimo", 2:"😕 Ruim", 3:"😐 Neutro", 4:"🙂 Bom", 5:"😍 Excelente" };
     openRankingModal(card.dataset.score, `Ranking — ${labels[card.dataset.score]}`);
@@ -172,8 +172,9 @@ function renderKpis(summary, dist) {
     const card = document.querySelector(`#kpi${i}`);
     if (el)   el.textContent = dist.counts[i] || 0;
     if (card) {
-      card.classList.toggle("kpi-active-low",  i <= 2 && dist.counts[i] > 0);
-      card.classList.toggle("kpi-active-high", i >= 4 && dist.counts[i] > 0);
+      card.classList.remove("kpi-active-low", "kpi-active-high");
+      if (i <= 2 && dist.counts[i] > 0) card.classList.add("kpi-active-low");
+      if (i >= 4 && dist.counts[i] > 0) card.classList.add("kpi-active-high");
     }
   }
 }

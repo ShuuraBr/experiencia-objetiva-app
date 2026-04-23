@@ -65,60 +65,60 @@
           </div>
         </section>
 
-        <!-- KPIs Linha 1 -->
-        <section class="metrics-row" id="kpis">
-          <article class="metric-card">
-            <span>Total de respostas</span>
-            <strong id="metricTotal">--</strong>
-          </article>
-          <article class="metric-card">
-            <span>Média geral</span>
-            <strong id="metricAvg">--</strong>
-          </article>
-          <article class="metric-card kpi-clickable" id="kpiLow" title="Clique para ver ranking">
-            <span>Nível Baixo (1–2)</span>
-            <strong id="metricLow">--%</strong>
-            <small id="metricLowCount" class="kpi-sub"></small>
-          </article>
-          <article class="metric-card kpi-clickable" id="kpiHigh" title="Clique para ver ranking">
-            <span>Nível Alto (4–5)</span>
-            <strong id="metricHigh">--%</strong>
-            <small id="metricHighCount" class="kpi-sub"></small>
-          </article>
-          <article class="metric-card">
-            <span>Setores ativos</span>
-            <strong id="metricSectors">--</strong>
-          </article>
-        </section>
+        <!-- ── KPIs unificados — 10 cards em 2 linhas, todos idênticos ── -->
+        <section class="kpi-grid" id="kpis">
 
-        <!-- Score Distribution -->
-        <section class="score-dist-row" id="scoreDist">
-          <p class="eyebrow" style="margin:0 0 14px;grid-column:1/-1;">Distribuição por avaliação — clique para ver ranking</p>
-          <article class="score-dist-card kpi-clickable" data-score="1" id="kpi1">
-            <span class="score-emoji">😡</span>
-            <span class="score-label">Péssimo</span>
-            <strong class="score-count" id="count1">0</strong>
+          <!-- Linha 1: métricas gerais -->
+          <article class="kpi-card">
+            <p class="kpi-label">Total de respostas</p>
+            <strong class="kpi-value" id="metricTotal">--</strong>
           </article>
-          <article class="score-dist-card kpi-clickable" data-score="2" id="kpi2">
-            <span class="score-emoji">😕</span>
-            <span class="score-label">Ruim</span>
-            <strong class="score-count" id="count2">0</strong>
+          <article class="kpi-card">
+            <p class="kpi-label">Média geral</p>
+            <strong class="kpi-value" id="metricAvg">--</strong>
           </article>
-          <article class="score-dist-card kpi-clickable" data-score="3" id="kpi3">
-            <span class="score-emoji">😐</span>
-            <span class="score-label">Neutro</span>
-            <strong class="score-count" id="count3">0</strong>
+          <article class="kpi-card kpi-clickable" id="kpiLow" title="Clique para ver ranking">
+            <p class="kpi-label">Nível Baixo (1–2)</p>
+            <strong class="kpi-value" id="metricLow">--%</strong>
+            <span class="kpi-sub" id="metricLowCount"></span>
           </article>
-          <article class="score-dist-card kpi-clickable" data-score="4" id="kpi4">
-            <span class="score-emoji">🙂</span>
-            <span class="score-label">Bom</span>
-            <strong class="score-count" id="count4">0</strong>
+          <article class="kpi-card kpi-clickable" id="kpiHigh" title="Clique para ver ranking">
+            <p class="kpi-label">Nível Alto (4–5)</p>
+            <strong class="kpi-value" id="metricHigh">--%</strong>
+            <span class="kpi-sub" id="metricHighCount"></span>
           </article>
-          <article class="score-dist-card kpi-clickable" data-score="5" id="kpi5">
-            <span class="score-emoji">😍</span>
-            <span class="score-label">Excelente</span>
-            <strong class="score-count" id="count5">0</strong>
+          <article class="kpi-card">
+            <p class="kpi-label">Setores ativos</p>
+            <strong class="kpi-value" id="metricSectors">--</strong>
           </article>
+
+          <!-- Linha 2: distribuição 1-5 -->
+          <article class="kpi-card kpi-clickable kpi-emoji-card" data-score="1" id="kpi1" title="Clique para ver ranking">
+            <span class="kpi-emoji">😡</span>
+            <p class="kpi-label">Péssimo</p>
+            <strong class="kpi-value" id="count1">0</strong>
+          </article>
+          <article class="kpi-card kpi-clickable kpi-emoji-card" data-score="2" id="kpi2" title="Clique para ver ranking">
+            <span class="kpi-emoji">😕</span>
+            <p class="kpi-label">Ruim</p>
+            <strong class="kpi-value" id="count2">0</strong>
+          </article>
+          <article class="kpi-card kpi-clickable kpi-emoji-card" data-score="3" id="kpi3" title="Clique para ver ranking">
+            <span class="kpi-emoji">😐</span>
+            <p class="kpi-label">Neutro</p>
+            <strong class="kpi-value" id="count3">0</strong>
+          </article>
+          <article class="kpi-card kpi-clickable kpi-emoji-card" data-score="4" id="kpi4" title="Clique para ver ranking">
+            <span class="kpi-emoji">🙂</span>
+            <p class="kpi-label">Bom</p>
+            <strong class="kpi-value" id="count4">0</strong>
+          </article>
+          <article class="kpi-card kpi-clickable kpi-emoji-card" data-score="5" id="kpi5" title="Clique para ver ranking">
+            <span class="kpi-emoji">😍</span>
+            <p class="kpi-label">Excelente</p>
+            <strong class="kpi-value" id="count5">0</strong>
+          </article>
+
         </section>
 
         <!-- Gráficos linha 1 -->
