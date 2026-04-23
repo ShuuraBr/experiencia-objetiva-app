@@ -217,32 +217,39 @@ function renderTrendChart(trend) {
 
 function renderSectorChart(bySector) {
   destroyChart("sector"); if (!bySector.length || !sectorCanvas) return;
-  const s = [...bySector].sort((a,b)=>b.responses-a.responses).slice(0,8);
+  const s = [...bySector].sort((a,b)=>b.responses-a.responses).slice(0,10);
   state.charts.sector = new Chart(sectorCanvas, {
     type:"bar",
-    data:{ labels:s.map((r)=>r.label), datasets:[{ label:"Respostas", data:s.map((r)=>r.responses),
-      backgroundColor:s.map((_,i)=>`hsla(${225+i*15},60%,45%,0.8)`), borderRadius:8 }] },
+    data:{ labels:s.map((r)=>r.label), datasets:[
+      { label:"Respostas", data:s.map((r)=>r.responses),
+        backgroundColor:s.map((_,i)=>`hsla(${225+i*14},62%,44%,0.82)`),
+        borderRadius:6, barThickness:22 },
+    ]},
     options:{ responsive:true, maintainAspectRatio:false, indexAxis:"y",
-      plugins:{legend:{display:false}},
-      scales:{ x:{grid:{color:CC.grid},ticks:{color:CC.text,font:{family:"Manrope"}}},
-               y:{grid:{display:false},ticks:{color:CC.text,font:{family:"Manrope",size:11}}} }},
+      plugins:{ legend:{display:false},
+        tooltip:{ callbacks:{ label:(ctx)=>`  ${ctx.raw} resposta(s)` } }},
+      scales:{
+        x:{grid:{color:CC.grid},ticks:{color:CC.text,font:{family:"Manrope"}}},
+        y:{grid:{display:false},ticks:{color:CC.text,font:{family:"Manrope",size:11}}} }},
   });
 }
 
 function renderAvgSectorChart(bySector) {
   destroyChart("avgSector"); if (!bySector.length || !avgSectorCanvas) return;
   const s = [...bySector].filter((r)=>r.average_score!==null)
-    .sort((a,b)=>(b.average_score||0)-(a.average_score||0)).slice(0,8);
+    .sort((a,b)=>(b.average_score||0)-(a.average_score||0)).slice(0,10);
   state.charts.avgSector = new Chart(avgSectorCanvas, {
     type:"bar",
     data:{ labels:s.map((r)=>r.label), datasets:[{ label:"Média", data:s.map((r)=>r.average_score),
       backgroundColor:s.map((r)=>{const v=r.average_score||0;
-        return v>=4?"rgba(0,150,94,0.8)":v>=3?"rgba(14,46,155,0.7)":v>=2?"rgba(232,163,0,0.8)":"rgba(214,59,47,0.8)";
-      }), borderRadius:8 }] },
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
-      scales:{ x:{grid:{display:false},ticks:{color:CC.text,font:{family:"Manrope",size:11}}},
-               y:{min:0,max:5,grid:{color:CC.grid},ticks:{color:CC.text,font:{family:"Manrope"}}} }},
+        return v>=4?"rgba(0,150,94,0.85)":v>=3?"rgba(14,46,155,0.75)":v>=2?"rgba(232,163,0,0.85)":"rgba(214,59,47,0.85)";
+      }), borderRadius:6, barThickness:24 }] },
+    options:{ responsive:true, maintainAspectRatio:false, indexAxis:"y",
+      plugins:{legend:{display:false},
+        tooltip:{ callbacks:{ label:(ctx)=>`  Média: ${ctx.raw}/5` } }},
+      scales:{
+        x:{min:0,max:5,grid:{color:CC.grid},ticks:{color:CC.text,font:{family:"Manrope"}}},
+        y:{grid:{display:false},ticks:{color:CC.text,font:{family:"Manrope",size:11}}} }},
   });
 }
 
@@ -290,13 +297,17 @@ function renderSignals(rows) {
 
 function renderComments(comments) {
   if (!commentsList) return;
-  if (!comments.length) { commentsList.innerHTML=`<p class="empty-state">Os comentários recentes aparecerão quando começarem a chegar respostas.</p>`; return; }
+  if (!comments.length) {
+    commentsList.innerHTML=`<p class="empty-state" style="grid-column:1/-1;">Os comentários recentes aparecerão quando começarem a chegar respostas.</p>`;
+    return;
+  }
   commentsList.innerHTML = comments.map((c)=>`
     <article class="comment-card">
       <div class="comment-header">
         <strong>${escapeHtml(c.employeeName||"Sem funcionário")}</strong>
-        <span style="color:${scoreColor(c.overallScore)}">${scoreEmoji(c.overallScore)} ${c.overallScore??'--'}/5 · ${escapeHtml(c.sectorName)}</span>
+        <span style="color:${scoreColor(c.overallScore)}">${scoreEmoji(c.overallScore)} ${c.overallScore??'--'}/5</span>
       </div>
+      <p class="comment-sector">${escapeHtml(c.sectorName)}</p>
       <p>${escapeHtml(c.comment)}</p>
       <small>${escapeHtml(c.customerName||"Sem nome")} · ${new Date(c.createdAt).toLocaleString("pt-BR")}</small>
     </article>`).join("");

@@ -121,94 +121,100 @@
 
         </section>
 
-        <!-- Gráficos linha 1 -->
-        <section class="dashboard-grid" id="charts" style="margin-bottom:20px;">
-          <article class="workspace-panel">
+        <!-- ═══════════════════════════════════════
+             BLOCO DE GRÁFICOS + ANALYTICS
+             Layout:
+             [  Tendência — linha do tempo (full width)  ]
+             [ Setores avaliados (2fr) | Distribuição (1fr) ]
+             [   Média por setor (full width)             ]
+             [ QR Code (1fr) | Top colab. (1fr) | Sinais (1fr) ]
+             [   Comentários (full width)                 ]
+             ═══════════════════════════════════════ -->
+        <div class="main-grid" id="charts">
+
+          <!-- Linha 1: Tendência — full width -->
+          <article class="workspace-panel span-full">
             <div class="panel-heading">
               <div><p class="eyebrow">Tendência</p><h3>Média diária de avaliações</h3></div>
             </div>
-            <div style="position:relative;height:220px;">
+            <div style="position:relative;height:200px;">
               <canvas id="trendCanvas"></canvas>
             </div>
           </article>
-          <article class="workspace-panel">
+
+          <!-- Linha 2: Setores (maior) + Distribuição pizza (menor) -->
+          <article class="workspace-panel span-2">
             <div class="panel-heading">
               <div><p class="eyebrow">Por setor</p><h3>Setores mais avaliados</h3></div>
             </div>
-            <div style="position:relative;height:220px;">
+            <div style="position:relative;height:240px;">
               <canvas id="sectorCanvas"></canvas>
             </div>
           </article>
-        </section>
 
-        <!-- Gráficos linha 2 -->
-        <section class="dashboard-grid" style="margin-bottom:20px;">
-          <article class="workspace-panel">
+          <article class="workspace-panel span-1">
             <div class="panel-heading">
-              <div><p class="eyebrow">Notas</p><h3>Média por setor</h3></div>
+              <div><p class="eyebrow">Distribuição</p><h3>Por categoria de nota</h3></div>
             </div>
-            <div style="position:relative;height:220px;">
-              <canvas id="avgSectorCanvas"></canvas>
-            </div>
-          </article>
-          <article class="workspace-panel">
-            <div class="panel-heading">
-              <div><p class="eyebrow">Distribuição</p><h3>Avaliações por categoria</h3></div>
-            </div>
-            <div style="position:relative;height:220px;">
+            <div style="position:relative;height:240px;">
               <canvas id="distCanvas"></canvas>
             </div>
           </article>
-        </section>
 
-        <!-- QR Code -->
-        <section class="workspace-panel" id="employees" style="margin-bottom:20px;">
-          <div class="panel-heading">
-            <div><p class="eyebrow">QR Code</p><h3>Acesso unificado da avaliação</h3></div>
-          </div>
-          <div class="qr-panel qr-panel-wide">
-            <div class="qr-wrap large">
-              <img id="qrImage" src="/api/qr" alt="QR code" />
+          <!-- Linha 3: Média por setor — full width (precisa de espaço para labels) -->
+          <article class="workspace-panel span-full">
+            <div class="panel-heading">
+              <div><p class="eyebrow">Notas</p><h3>Média de avaliações por setor</h3></div>
             </div>
-            <div class="qr-panel-info">
+            <div style="position:relative;height:200px;">
+              <canvas id="avgSectorCanvas"></canvas>
+            </div>
+          </article>
+
+          <!-- Linha 4: QR + Top colaboradores + Sinais — 3 colunas -->
+          <article class="workspace-panel span-1" id="employees">
+            <div class="panel-heading">
+              <div><p class="eyebrow">QR Code</p><h3>Link da avaliação</h3></div>
+            </div>
+            <div class="qr-stack">
+              <div class="qr-wrap">
+                <img id="qrImage" src="/api/qr" alt="QR code" />
+              </div>
               <label class="link-box">
                 <span>Link público</span>
                 <input type="text" id="surveyLink" readonly />
               </label>
-              <div class="card-actions">
+              <div class="card-actions" style="flex-wrap:wrap;">
                 <button class="ghost-button small" id="copyLinkButton">Copiar link</button>
-                <a class="ghost-button small" id="openSurveyLink" href="/avaliar" target="_blank">Abrir avaliação</a>
-                <a class="ghost-button small" href="/api/qr" download="experiencia-objetiva-qr.svg">Baixar QR</a>
+                <a class="ghost-button small" id="openSurveyLink" href="/avaliar" target="_blank">Abrir</a>
+                <a class="ghost-button small" href="/api/qr" download="qr.svg">Baixar QR</a>
               </div>
             </div>
-          </div>
-        </section>
+          </article>
 
-        <!-- Rankings -->
-        <section class="workspace-panel" style="margin-bottom:20px;">
-          <div class="dashboard-grid secondary" style="margin:0;">
-            <article>
-              <div class="panel-heading">
-                <div><p class="eyebrow">Destaques</p><h3>Top colaboradores</h3></div>
-              </div>
-              <div class="bar-list" id="breakdownEmployees"></div>
-            </article>
-            <article>
-              <div class="panel-heading">
-                <div><p class="eyebrow">Alertas</p><h3>Sinais de notas baixas</h3></div>
-              </div>
-              <div class="signal-list" id="signalsList"></div>
-            </article>
-          </div>
-        </section>
+          <article class="workspace-panel span-1">
+            <div class="panel-heading">
+              <div><p class="eyebrow">Destaques</p><h3>Top colaboradores</h3></div>
+            </div>
+            <div class="bar-list" id="breakdownEmployees"></div>
+          </article>
 
-        <!-- Comentários -->
-        <section class="workspace-panel" id="comments" style="margin-bottom:28px;">
-          <div class="panel-heading">
-            <div><p class="eyebrow">Feedback aberto</p><h3>Comentários recentes</h3></div>
-          </div>
-          <div class="comments-stack" id="commentsList"></div>
-        </section>
+          <article class="workspace-panel span-1">
+            <div class="panel-heading">
+              <div><p class="eyebrow">Alertas</p><h3>Sinais de notas baixas</h3></div>
+            </div>
+            <div class="signal-list" id="signalsList"></div>
+          </article>
+
+          <!-- Linha 5: Comentários — full width -->
+          <article class="workspace-panel span-full" id="comments">
+            <div class="panel-heading">
+              <div><p class="eyebrow">Feedback aberto</p><h3>Comentários recentes</h3></div>
+            </div>
+            <div class="comments-grid" id="commentsList"></div>
+          </article>
+
+        </div>
 
       </main>
     </div>
