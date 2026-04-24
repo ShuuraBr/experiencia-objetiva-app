@@ -660,16 +660,36 @@ export async function getDashboard(filters = {}) {
     `SELECT COUNT(*) AS total_responses, ROUND(AVG(r.overall_score),2) AS average_overall
       FROM responses r JOIN sectors s ON s.id=r.sector_id ${filter.sql}`, filter.params);
 
-  // Score distribution
+  // Score distribution — count EACH answer score (not rounded overall)
   const distRows = await db.all(
-    `SELECT ROUND(r.overall_score) AS score_cat, COUNT(*) AS cnt
-      FROM responses r JOIN sectors s ON s.id=r.sector_id ${filter.sql}
-      GROUP BY ROUND(r.overall_score)`, filter.params);
+    `SELECT ra.score AS score_cat, COUNT(*) AS cnt
+      FROM response_answers ra
+      JOIN responses r ON r.id = ra.response_id
+      JOIN sectors s ON s.id = r.sector_id ${filter.sql}
+      GROUP BY ra.score`, filter.params);
 
   const dist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   for (const row of distRows) {
     const cat = Math.min(5, Math.max(1, Math.round(Number(row.score_cat))));
     dist[cat] = (dist[cat] || 0) + Number(row.cnt);
+  }
+
+  // Per-score question breakdown — for each score level, which questions got that rating and how many times
+  const questionScoreRows = await db.all(
+    `SELECT ra.score, sq.id AS question_id, sq.text AS question_text, sq.position,
+        COUNT(*) AS cnt
+      FROM response_answers ra
+      JOIN responses r ON r.id = ra.response_id
+      JOIN sectors s ON s.id = r.sector_id
+      JOIN sector_questions sq ON sq.id = ra.question_id ${filter.sql}
+      GROUP BY ra.score, sq.id, sq.text, sq.position
+      ORDER BY ra.score ASC, cnt DESC`, filter.params);
+
+  // Group by score: { 1: [{questionId, text, count},...], ... }
+  const questionsByScore = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+  for (const row of questionScoreRows) {
+    const s = Math.min(5, Math.max(1, Number(row.score)));
+    questionsByScore[s].push({ questionId: Number(row.question_id), text: row.question_text, count: Number(row.cnt) });
   }
   const total = Object.values(dist).reduce((a, b) => a + b, 0);
   const lowCount = dist[1] + dist[2];
@@ -714,6 +734,7 @@ export async function getDashboard(filters = {}) {
       lowPercent: total > 0 ? Math.round((lowCount / total) * 100) : 0,
       highPercent: total > 0 ? Math.round((highCount / total) * 100) : 0,
       lowCount, highCount, total,
+      questionsByScore,
     },
     trend: [...trend].reverse().map((r) => ({ day: r.day, responses: Number(r.responses), averageScore: r.average_score == null ? null : Number(r.average_score) })),
     breakdowns: {
@@ -829,21 +850,29 @@ export async function validateTfaCode(code) {
   return true;
 }
 
-export async function createSession() {
+export async function createSession(userEmail = "", userName = "") {
   const db = await ensureAdapter();
   const id = crypto.randomBytes(32).toString("hex");
   const now = new Date();
   const expires = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-  await db.run(`INSERT INTO auth_sessions (id, created_at, expires_at) VALUES (?,?,?)`,
-    [id, now.toISOString(), expires.toISOString()]);
+  // Try to add user_email/user_name columns if they don't exist yet (safe migration)
+  try {
+    await db.run(`ALTER TABLE auth_sessions ADD COLUMN user_email TEXT DEFAULT ''`);
+  } catch { /* column already exists */ }
+  try {
+    await db.run(`ALTER TABLE auth_sessions ADD COLUMN user_name TEXT DEFAULT ''`);
+  } catch { /* column already exists */ }
+  await db.run(`INSERT INTO auth_sessions (id, created_at, expires_at, user_email, user_name) VALUES (?,?,?,?,?)`,
+    [id, now.toISOString(), expires.toISOString(), userEmail, userName]);
   return { id, expiresAt: expires.toISOString() };
 }
 
 export async function validateSession(id) {
   if (!id) return false;
   const db = await ensureAdapter();
-  const row = await db.get(`SELECT id FROM auth_sessions WHERE id=? AND expires_at>?`, [id, new Date().toISOString()]);
-  return Boolean(row);
+  const row = await db.get(`SELECT id, user_email, user_name FROM auth_sessions WHERE id=? AND expires_at>?`, [id, new Date().toISOString()]);
+  if (!row) return false;
+  return { id: row.id, email: row.user_email || "", name: row.user_name || "" };
 }
 
 export async function deleteSession(id) {

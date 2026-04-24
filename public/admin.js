@@ -8,7 +8,15 @@ async function checkAuth() {
     const data = await res.json();
     if (!data.authenticated) { window.location.href = "/login"; return false; }
     const el = document.querySelector("#authEmail");
-    if (el) el.textContent = data.email;
+    if (el) {
+      const nameEl  = document.querySelector("#authName");
+      if (data.name && nameEl) nameEl.textContent = data.name;
+      else if (data.name && el) {
+        // insert name above email
+        el.insertAdjacentHTML("beforebegin", `<p id="authName" style="color:rgba(255,255,255,0.92);font-size:0.92rem;font-weight:600;margin:0 0 2px;">${data.name}</p>`);
+      }
+      el.textContent = data.email;
+    }
     return true;
   } catch { window.location.href = "/login"; return false; }
 }
@@ -77,14 +85,15 @@ document.querySelector("#kpiHigh")?.addEventListener("click", () => openRankingM
 document.querySelectorAll(".kpi-emoji-card.kpi-clickable").forEach((card) => {
   card.addEventListener("click", () => {
     const labels = { 1:"😡 Péssimo", 2:"😕 Ruim", 3:"😐 Neutro", 4:"🙂 Bom", 5:"😍 Excelente" };
-    openRankingModal(card.dataset.score, `Ranking — ${labels[card.dataset.score]}`);
+    const score  = Number(card.dataset.score);
+    openScoreModal(score, labels[score]);
   });
 });
 
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
-const state = { sectors: [], filterSectorId: "", filterStartDate: "", filterEndDate: "", charts: {} };
+const state = { sectors: [], filterSectorId: "", filterStartDate: "", filterEndDate: "", charts: {}, questionsByScore: {} };
 
 // ---------------------------------------------------------------------------
 // Boot
@@ -173,6 +182,7 @@ function renderKpis(summary, dist) {
   if (metricLowCount)  metricLowCount.textContent  = `${dist.lowCount} respostas`;
   if (metricHigh)      metricHigh.textContent      = `${dist.highPercent}%`;
   if (metricHighCount) metricHighCount.textContent = `${dist.highCount} respostas`;
+  state.questionsByScore = dist.questionsByScore || {};
   for (let i = 1; i <= 5; i++) {
     const el   = document.querySelector(`#count${i}`);
     const card = document.querySelector(`#kpi${i}`);
@@ -381,6 +391,58 @@ function renderQuestionsContent(container, questions) {
         </article>`;
       }).join("")}
     </div>`).join("");
+}
+
+// ── Score-specific modal: shows which questions received a given score level ──
+function openScoreModal(score, label) {
+  if (!modalTitle) return;
+  const COLORS = { 1:"#D63B2F", 2:"#E8A300", 3:"#8A93B4", 4:"#3BA35B", 5:"#00965e" };
+  modalTitle.textContent = `Perguntas avaliadas como ${label}`;
+  // Use single-tab mode — only sector tab visible, employee/questions hidden
+  tabSector.classList.add("active");
+  tabEmployee.classList.remove("active");
+  tabQuestions?.classList.remove("active");
+  tabEmployee.style.display = "none";
+  tabQuestions && (tabQuestions.style.display = "none");
+  modalContentSector.hidden = false;
+  modalContentEmployee.hidden = true;
+  if (modalContentQuestions) modalContentQuestions.hidden = true;
+  openModal();
+
+  const questions = state.questionsByScore[score] || [];
+  if (!questions.length) {
+    modalContentSector.innerHTML = `<p class="empty-state">Nenhuma avaliação com nota ${label} ainda.</p>`;
+  } else {
+    const color = COLORS[score];
+    const total = questions.reduce((s, q) => s + q.count, 0);
+    const max   = Math.max(...questions.map(q => q.count), 1);
+    modalContentSector.innerHTML = `
+      <p style="margin:0 0 4px;font-size:0.82rem;color:var(--text-soft);">
+        ${total} resposta${total !== 1 ? "s" : ""} com essa avaliação — por pergunta:
+      </p>
+      ${questions.map((q) => {
+        const pct = Math.round((q.count / max) * 100);
+        return `<article class="ranking-row">
+          <div class="ranking-info" style="flex:1;">
+            <strong style="font-size:0.9rem;line-height:1.4;">${escapeHtml(q.text)}</strong>
+          </div>
+          <div class="ranking-bar-wrap" style="width:140px;">
+            <div class="ranking-bar"><span style="width:${pct}%;background:${color};"></span></div>
+            <span class="ranking-count">${q.count}×</span>
+          </div>
+        </article>`;
+      }).join("")}`;
+  }
+
+  // Restore tabs visibility on modal close
+  const onClose = () => {
+    tabEmployee.style.display = "";
+    tabQuestions && (tabQuestions.style.display = "");
+    modalOverlay?.removeEventListener("click", onClose);
+    document.querySelector("#modalClose")?.removeEventListener("click", onClose);
+  };
+  modalOverlay?.addEventListener("click", onClose);
+  document.querySelector("#modalClose")?.addEventListener("click", onClose);
 }
 
 function renderRankingContent(container, rows, subtitleKey) {

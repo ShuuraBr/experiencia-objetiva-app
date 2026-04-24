@@ -149,11 +149,15 @@ app.get("/api/qr", async (req, res, next) => {
 // ---------------------------------------------------------------------------
 // Auth routes
 // ---------------------------------------------------------------------------
+// Temporary in-memory store: maps TFA code attempt → user info (cleared on verify)
+const pendingUsers = new Map(); // code → { email, name }
+
 app.post("/api/auth/login", async (req, res) => {
   const user = await resolveCredentials(req.body.email, req.body.password);
   if (!user) return res.status(401).json({ error: "E-mail ou senha incorretos." });
   try {
     const code = await createTfaCode();
+    pendingUsers.set(String(code).trim(), { email: user.email, name: user.name || "" });
     const emailSent = await sendTfaEmail(user.email, code);
     res.json({ ok:true, emailSent,
       message: emailSent ? `Código enviado para ${user.email}.` : `Código gerado — verifique o terminal.` });
@@ -163,9 +167,12 @@ app.post("/api/auth/login", async (req, res) => {
 app.post("/api/auth/verify-2fa", async (req, res) => {
   const { code } = req.body;
   if (!code) return res.status(400).json({ error: "Informe o código." });
-  const valid = await validateTfaCode(String(code).trim());
+  const codeStr = String(code).trim();
+  const valid = await validateTfaCode(codeStr);
   if (!valid) return res.status(401).json({ error: "Código inválido ou expirado." });
-  const session = await createSession();
+  const pending = pendingUsers.get(codeStr) || { email: ENV_EMAIL, name: "Administrador" };
+  pendingUsers.delete(codeStr);
+  const session = await createSession(pending.email, pending.name);
   res.cookie("session_token", session.id, {
     httpOnly:true, secure:process.env.NODE_ENV==="production", sameSite:"lax",
     expires:new Date(session.expiresAt),
@@ -182,9 +189,9 @@ app.post("/api/auth/logout", async (req, res) => {
 
 app.get("/api/auth/me", async (req, res) => {
   const token = getSessionToken(req);
-  const valid = token ? await validateSession(token) : false;
-  if (!valid) return res.status(401).json({ authenticated:false });
-  res.json({ authenticated:true, email: ENV_EMAIL });
+  const session = token ? await validateSession(token) : false;
+  if (!session) return res.status(401).json({ authenticated:false });
+  res.json({ authenticated:true, email: session.email || ENV_EMAIL, name: session.name || "" });
 });
 
 // ---------------------------------------------------------------------------
