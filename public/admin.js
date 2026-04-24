@@ -45,6 +45,8 @@ const tabSector            = document.querySelector("#tabSector");
 const tabEmployee          = document.querySelector("#tabEmployee");
 const modalContentSector   = document.querySelector("#modalContentSector");
 const modalContentEmployee = document.querySelector("#modalContentEmployee");
+const modalContentQuestions = document.querySelector("#modalContentQuestions");
+const tabQuestions          = document.querySelector("#tabQuestions");
 
 // ---------------------------------------------------------------------------
 // Modal — todos os listeners registrados IMEDIATAMENTE (fora do boot)
@@ -57,12 +59,16 @@ modalOverlay?.addEventListener("click", (e) => { if (e.target === modalOverlay) 
 document.addEventListener("keydown",   (e) => { if (e.key === "Escape") closeModal(); });
 
 tabSector?.addEventListener("click", () => {
-  tabSector.classList.add("active");   tabEmployee.classList.remove("active");
-  modalContentSector.hidden = false;   modalContentEmployee.hidden = true;
+  tabSector.classList.add("active");   tabEmployee.classList.remove("active"); tabQuestions?.classList.remove("active");
+  modalContentSector.hidden = false;   modalContentEmployee.hidden = true; if (modalContentQuestions) modalContentQuestions.hidden = true;
 });
 tabEmployee?.addEventListener("click", () => {
-  tabEmployee.classList.add("active"); tabSector.classList.remove("active");
-  modalContentEmployee.hidden = false; modalContentSector.hidden = true;
+  tabEmployee.classList.add("active"); tabSector.classList.remove("active"); tabQuestions?.classList.remove("active");
+  modalContentEmployee.hidden = false; modalContentSector.hidden = true; if (modalContentQuestions) modalContentQuestions.hidden = true;
+});
+tabQuestions?.addEventListener("click", () => {
+  tabQuestions.classList.add("active"); tabSector.classList.remove("active"); tabEmployee.classList.remove("active");
+  modalContentQuestions.hidden = false; modalContentSector.hidden = true; modalContentEmployee.hidden = true;
 });
 
 // KPI clickable — registrados aqui para funcionar mesmo antes do dashboard carregar
@@ -321,18 +327,60 @@ async function openRankingModal(type, title) {
   modalTitle.textContent = title;
   modalContentSector.innerHTML   = `<p class="empty-state">Carregando...</p>`;
   modalContentEmployee.innerHTML = `<p class="empty-state">Carregando...</p>`;
-  tabSector.classList.add("active");   tabEmployee.classList.remove("active");
-  modalContentSector.hidden = false;   modalContentEmployee.hidden = true;
+  if (modalContentQuestions) modalContentQuestions.innerHTML = `<p class="empty-state">Carregando...</p>`;
+  tabSector.classList.add("active");   tabEmployee.classList.remove("active"); tabQuestions?.classList.remove("active");
+  modalContentSector.hidden = false;   modalContentEmployee.hidden = true; if (modalContentQuestions) modalContentQuestions.hidden = true;
   openModal();
   try {
     const q = new URLSearchParams({ type });
     if (state.filterSectorId)  q.set("sectorId",  state.filterSectorId);
     if (state.filterStartDate) q.set("startDate", state.filterStartDate);
     if (state.filterEndDate)   q.set("endDate",   state.filterEndDate);
-    const { ranking } = await fetchJson(`/api/dashboard/ranking?${q}`);
+    const qBase = new URLSearchParams();
+    if (state.filterSectorId)  qBase.set("sectorId",  state.filterSectorId);
+    if (state.filterStartDate) qBase.set("startDate", state.filterStartDate);
+    if (state.filterEndDate)   qBase.set("endDate",   state.filterEndDate);
+    const [{ ranking }, { questions }] = await Promise.all([
+      fetchJson(`/api/dashboard/ranking?${q}`),
+      fetchJson(`/api/dashboard/questions?${qBase}`),
+    ]);
     renderRankingContent(modalContentSector,   ranking.bySector,   "category");
     renderRankingContent(modalContentEmployee, ranking.byEmployee, "sector_name");
+    if (modalContentQuestions) renderQuestionsContent(modalContentQuestions, questions);
   } catch (err) { modalContentSector.innerHTML=`<p class="empty-state">Erro: ${err.message}</p>`; }
+}
+
+function renderQuestionsContent(container, questions) {
+  if (!questions.length) { container.innerHTML=`<p class="empty-state">Sem dados para exibir.</p>`; return; }
+  const LABELS = { 1:"😡 Péssimo", 2:"😕 Ruim", 3:"😐 Neutro", 4:"🙂 Bom", 5:"😍 Excelente" };
+  const COLORS = { 1:"#D63B2F", 2:"#E8A300", 3:"#8A93B4", 4:"#3BA35B", 5:"#00965e" };
+  // Group by sector
+  const bySector = {};
+  for (const q of questions) {
+    if (!bySector[q.sectorName]) bySector[q.sectorName] = [];
+    bySector[q.sectorName].push(q);
+  }
+  container.innerHTML = Object.entries(bySector).map(([sector, qs]) => `
+    <div class="questions-sector-block">
+      <p class="questions-sector-label">${escapeHtml(sector)}</p>
+      ${qs.map((q) => {
+        const bars = [1,2,3,4,5].map((score) => {
+          const count = q.counts[score] || 0;
+          const pct = q.total > 0 ? Math.round((count / q.total) * 100) : 0;
+          return `<div class="q-score-row">
+            <span class="q-score-label" style="color:${COLORS[score]}">${LABELS[score]}</span>
+            <div class="q-score-bar-wrap">
+              <div class="q-score-bar"><span style="width:${pct}%;background:${COLORS[score]}"></span></div>
+            </div>
+            <span class="q-score-count">${count}</span>
+          </div>`;
+        }).join("");
+        return `<article class="question-dist-card">
+          <p class="question-dist-text">${escapeHtml(q.text)}</p>
+          <div class="question-dist-bars">${bars}</div>
+        </article>`;
+      }).join("")}
+    </div>`).join("");
 }
 
 function renderRankingContent(container, rows, subtitleKey) {

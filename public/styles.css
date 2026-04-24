@@ -1070,3 +1070,102 @@ textarea { resize: vertical; }
 
 /* ── dashboard-grid legacy → apenas para mobile fallback ── */
 /* Remove old .dashboard-grid override that conflicted with main-grid */
+
+/* ── Step 4: Border radius fixes — bar-row and other items ── */
+.bar-row {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.72);
+  border: 1px solid var(--line);
+}
+
+.topbar {
+  border-radius: 20px;
+  background: rgba(255,255,255,0.64);
+  border: 1px solid var(--line);
+  padding: 16px 22px;
+  backdrop-filter: blur(12px);
+  margin-bottom: 4px;
+}
+
+/* ── Step 2: Per-question distribution styles ── */
+.questions-sector-block {
+  display: grid;
+  gap: 10px;
+}
+
+.questions-sector-label {
+  margin: 0 0 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+}
+
+.question-dist-card {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(242, 245, 255, 0.7);
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+}
+
+.question-dist-text {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.question-dist-bars {
+  display: grid;
+  gap: 5px;
+}
+
+.q-score-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 36px;
+  align-items: center;
+  gap: 8px;
+}
+
+.q-score-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.q-score-bar-wrap {
+  height: 7px;
+  background: rgba(0,9,40,0.07);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.q-score-bar {
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
+.q-score-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 500ms ease;
+}
+
+.q-score-count {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-soft);
+  text-align: right;
+}
+
+@media (max-width: 560px) {
+  .q-score-row { grid-template-columns: 80px 1fr 28px; }
+  .q-score-label { font-size: 0.68rem; }
+}

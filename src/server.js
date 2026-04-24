@@ -9,7 +9,7 @@ import QRCode from "qrcode";
 import {
   createEmployee, createSession, createTfaCode,
   deactivateEmployee, deleteSession,
-  exportResponsesCsv, getDashboard, getDashboardRanking,
+  exportResponsesCsv, getDashboard, getDashboardRanking, getQuestionsDistribution,
   getDatabaseStatus, getSectorWithDetails,
   listEmployees, listSectors, saveResponse,
   storageMode, validateSession, validateTfaCode,
@@ -238,6 +238,13 @@ app.get("/api/dashboard", authMiddleware, async (req, res, next) => {
 app.get("/api/dashboard/ranking", authMiddleware, async (req, res, next) => {
   try {
     res.json({ ranking: await getDashboardRanking(req.query.type, {
+      sectorId:req.query.sectorId, startDate:req.query.startDate, endDate:req.query.endDate,
+    })});
+  } catch (e) { next(e); }
+});
+app.get("/api/dashboard/questions", authMiddleware, async (req, res, next) => {
+  try {
+    res.json({ questions: await getQuestionsDistribution({
       sectorId:req.query.sectorId, startDate:req.query.startDate, endDate:req.query.endDate,
     })});
   } catch (e) { next(e); }

@@ -725,6 +725,43 @@ export async function getDashboard(filters = {}) {
   };
 }
 
+export async function getQuestionsDistribution(filters = {}) {
+  const db = await ensureAdapter();
+  const filter = buildResponseFilter(filters);
+
+  const rows = await db.all(
+    `SELECT sq.id, sq.text, sq.position,
+        COUNT(ra.id) AS total,
+        SUM(CASE WHEN ra.score=1 THEN 1 ELSE 0 END) AS score_1,
+        SUM(CASE WHEN ra.score=2 THEN 1 ELSE 0 END) AS score_2,
+        SUM(CASE WHEN ra.score=3 THEN 1 ELSE 0 END) AS score_3,
+        SUM(CASE WHEN ra.score=4 THEN 1 ELSE 0 END) AS score_4,
+        SUM(CASE WHEN ra.score=5 THEN 1 ELSE 0 END) AS score_5,
+        s.name AS sector_name
+      FROM response_answers ra
+      JOIN responses r ON r.id=ra.response_id
+      JOIN sector_questions sq ON sq.id=ra.question_id
+      JOIN sectors s ON s.id=r.sector_id
+      ${filter.sql}
+      GROUP BY sq.id, sq.text, sq.position, s.name
+      ORDER BY s.name ASC, sq.position ASC`, filter.params);
+
+  return rows.map((r) => ({
+    id: Number(r.id),
+    text: r.text,
+    position: Number(r.position),
+    sectorName: r.sector_name,
+    total: Number(r.total),
+    counts: {
+      1: Number(r.score_1),
+      2: Number(r.score_2),
+      3: Number(r.score_3),
+      4: Number(r.score_4),
+      5: Number(r.score_5),
+    },
+  }));
+}
+
 export async function getDashboardRanking(type, filters = {}) {
   const db = await ensureAdapter();
   const filter = buildResponseFilter(filters);
