@@ -245,30 +245,41 @@ function destroyChart(key) {
   document.body.appendChild(overlay);
 
 
-  // 3) Block known screenshot keys
+  // 3) Intercept screenshot keys BEFORE the OS acts
+  //    keydown fires before Windows processes Win+Shift+S, so the overlay
+  //    is already visible by the time the Snipping Tool captures the screen.
   window.addEventListener("keydown", (e) => {
-    const isCapture =
+    // PrintScreen variants
+    const isPrintScreen =
       e.key === "PrintScreen" ||
-      (e.shiftKey && e.key === "PrintScreen") ||
-      (e.shiftKey && e.metaKey && ["3","4","s","S"].includes(e.key));
-    if (isCapture) {
+      (e.shiftKey && e.key === "PrintScreen");
+
+    // macOS Cmd+Shift+3/4/S
+    const isMacCapture =
+      e.shiftKey && e.metaKey && ["3","4","s","S"].includes(e.key);
+
+    // Win+Shift+S — Windows key is not exposed to JS, but browser DOES receive
+    // Shift+S keydown first. We block it when the user is NOT typing in a field.
+    const tag = document.activeElement?.tagName?.toLowerCase();
+    const isEditable =
+      tag === "input" || tag === "textarea" ||
+      document.activeElement?.isContentEditable;
+    const isWinShiftS =
+      e.shiftKey && (e.key === "s" || e.key === "S") && !isEditable;
+
+    if (isPrintScreen || isMacCapture || isWinShiftS) {
       e.preventDefault();
       showCaptureBlock();
     }
-  });
+  }, true); // capture phase = fires before any other handler
 
-  // 4) Win+Shift+S opens Snipping Tool — window loses focus
-  window.addEventListener("blur", () => {
-    showCaptureBlock();
-  });
-  window.addEventListener("focus", () => {
-    hideCaptureBlock();
-  });
+  // 4) Fallback: window loses focus when Snipping Tool / other capture tools open
+  window.addEventListener("blur", showCaptureBlock);
+  window.addEventListener("focus", hideCaptureBlock);
 
-  // Legacy visibilitychange fallback
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) showCaptureBlock();
-    else setTimeout(hideCaptureBlock, 400);
+    else hideCaptureBlock();
   });
 
   // 5) Disable right-click to prevent "Save image as"
@@ -276,9 +287,11 @@ function destroyChart(key) {
 
   function showCaptureBlock() {
     overlay.style.display = "flex";
-    setTimeout(hideCaptureBlock, 2500);
   }
-  function hideCaptureBlock() { overlay.style.display = "none"; }
+  function hideCaptureBlock() {
+    // Small delay so overlay is still visible in the captured frame if blur fires late
+    setTimeout(() => { overlay.style.display = "none"; }, 600);
+  }
 })();
 
 function renderCharts(d) {
