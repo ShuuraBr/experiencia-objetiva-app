@@ -201,26 +201,6 @@ function renderKpis(summary, dist) {
 const CC = { accent:"#0E2E9B", success:"#00965e", grid:"rgba(14,46,155,0.08)", text:"rgba(0,9,40,0.6)" };
 const SC = ["#D63B2F","#E8A300","#8A93B4","#3BA35B","#00965e"];
 
-// Make Chart.js canvas backgrounds transparent — clear before every draw
-try {
-  if (Chart.registry.plugins.get("customCanvasBackgroundColor")) {
-    Chart.unregister(Chart.registry.plugins.get("customCanvasBackgroundColor"));
-  }
-} catch (_) { /* ignore */ }
-
-Chart.register({
-  id: "clearBackground",
-  beforeDraw(chart) {
-    const ctx = chart.ctx;
-    ctx.save();
-    ctx.clearRect(0, 0, chart.width, chart.height);
-    ctx.restore();
-  },
-  afterInit(chart) {
-    chart.canvas.style.cssText += ";background:transparent!important;";
-  }
-});
-
 // ── Screenshot / Screen-capture protection ────────────────────────────────
 (function initScreenshotProtection() {
   // 1) Fullscreen block overlay — shown on capture detection
@@ -243,15 +223,14 @@ Chart.register({
     </div>`;
   document.body.appendChild(overlay);
 
-  // 2) SVG-based repeating watermark — virtually invisible during normal use,
-  //    but clearly marks captured images with user identity
+  // 2) SVG-based repeating watermark — uses z-index:1 so it sits ABOVE page bg
+  //    but BELOW interactive elements. Visible in screenshots due to fixed positioning.
   function buildWatermark(email) {
     const text = `Uso interno · ${email || "Objetiva"} · Equipe de Planejamento`;
-    // Create an SVG data URI with the repeating pattern
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="200">
       <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle"
         font-family="Manrope,Arial,sans-serif" font-size="13" font-weight="600"
-        fill="rgba(0,9,40,0.07)" transform="rotate(-25,240,100)"
+        fill="rgba(0,9,40,0.06)" transform="rotate(-25,240,100)"
         letter-spacing="2">${text}</text>
     </svg>`;
     return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
@@ -260,7 +239,9 @@ Chart.register({
   const wm = document.createElement("div");
   wm.id = "wm-layer";
   Object.assign(wm.style, {
-    position: "fixed", inset: "0", zIndex: "9998",
+    position: "fixed", inset: "0",
+    // z-index 1 = above page background, BELOW all content (charts, cards, etc.)
+    zIndex: "1",
     pointerEvents: "none",
     userSelect: "none",
     backgroundRepeat: "repeat",
@@ -275,7 +256,6 @@ Chart.register({
     if (email) wm.style.backgroundImage = buildWatermark(email);
   }, 1200);
 
-  // Also listen for authEmail text changes
   const emailEl = document.querySelector("#authEmail");
   if (emailEl) {
     new MutationObserver(() => {
@@ -289,7 +269,7 @@ Chart.register({
     const isCapture =
       e.key === "PrintScreen" ||
       (e.shiftKey && e.key === "PrintScreen") ||
-      (e.shiftKey && e.metaKey && ["3","4","s","S"].includes(e.key)); // macOS
+      (e.shiftKey && e.metaKey && ["3","4","s","S"].includes(e.key));
     if (isCapture) {
       e.preventDefault();
       showCaptureBlock();
