@@ -201,29 +201,34 @@ function renderKpis(summary, dist) {
 const CC = { accent:"#0E2E9B", success:"#00965e", grid:"rgba(14,46,155,0.08)", text:"rgba(0,9,40,0.6)" };
 const SC = ["#D63B2F","#E8A300","#8A93B4","#3BA35B","#00965e"];
 
-// Make all Chart.js canvas backgrounds transparent (no white fill)
+// Make Chart.js canvas backgrounds transparent — clear before every draw
+try {
+  if (Chart.registry.plugins.get("customCanvasBackgroundColor")) {
+    Chart.unregister(Chart.registry.plugins.get("customCanvasBackgroundColor"));
+  }
+} catch (_) { /* ignore */ }
+
 Chart.register({
-  id: "transparentBackground",
+  id: "clearBackground",
   beforeDraw(chart) {
     const ctx = chart.ctx;
     ctx.save();
-    ctx.globalCompositeOperation = "destination-over";
-    ctx.fillStyle = "transparent";
-    ctx.fillRect(0, 0, chart.width, chart.height);
+    ctx.clearRect(0, 0, chart.width, chart.height);
     ctx.restore();
+  },
+  afterInit(chart) {
+    chart.canvas.style.cssText += ";background:transparent!important;";
   }
 });
-// Remove Chart.js default white background globally
-Chart.defaults.backgroundColor = "transparent";
 
 // ── Screenshot / Screen-capture protection ────────────────────────────────
 (function initScreenshotProtection() {
-  // 1) Overlay element shown when capture is detected
+  // 1) Fullscreen block overlay — shown on capture detection
   const overlay = document.createElement("div");
   overlay.id = "screenshot-overlay";
   Object.assign(overlay.style, {
     position: "fixed", inset: "0", zIndex: "999999",
-    background: "rgba(0,9,40,0.96)",
+    background: "rgba(0,9,40,0.97)",
     display: "none", alignItems: "center", justifyContent: "center",
     flexDirection: "column", gap: "16px",
     fontFamily: "Manrope, sans-serif",
@@ -238,67 +243,71 @@ Chart.defaults.backgroundColor = "transparent";
     </div>`;
   document.body.appendChild(overlay);
 
-  // 2) Persistent diagonal watermark over the whole dashboard
+  // 2) SVG-based repeating watermark — virtually invisible during normal use,
+  //    but clearly marks captured images with user identity
+  function buildWatermark(email) {
+    const text = `Uso interno · ${email || "Objetiva"} · Equipe de Planejamento`;
+    // Create an SVG data URI with the repeating pattern
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="200">
+      <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle"
+        font-family="Manrope,Arial,sans-serif" font-size="13" font-weight="600"
+        fill="rgba(0,9,40,0.07)" transform="rotate(-25,240,100)"
+        letter-spacing="2">${text}</text>
+    </svg>`;
+    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+  }
+
   const wm = document.createElement("div");
   wm.id = "wm-layer";
   Object.assign(wm.style, {
     position: "fixed", inset: "0", zIndex: "9998",
-    pointerEvents: "none", overflow: "hidden",
+    pointerEvents: "none",
     userSelect: "none",
+    backgroundRepeat: "repeat",
+    backgroundSize: "480px 200px",
+    backgroundImage: buildWatermark("Objetiva Atacadista"),
   });
-  // Tile a repeating diagonal text watermark
-  const userEmail = document.querySelector("#authEmail")?.textContent || "Objetiva Atacadista";
-  const wmText = `Uso interno — ${userEmail} — Equipe de Planejamento`.repeat(4);
-  for (let i = 0; i < 8; i++) {
-    const row = document.createElement("div");
-    Object.assign(row.style, {
-      position: "absolute",
-      top: `${i * 13}%`,
-      left: "-10%",
-      width: "120%",
-      whiteSpace: "nowrap",
-      transform: `rotate(-22deg)`,
-      fontSize: "0.72rem",
-      fontWeight: "600",
-      color: "rgba(0,9,40,0.055)",
-      letterSpacing: "0.12em",
-    });
-    row.textContent = wmText;
-    wm.appendChild(row);
-  }
   document.body.appendChild(wm);
-  // Update watermark text after auth loads
-  setTimeout(() => {
-    const email = document.querySelector("#authEmail")?.textContent;
-    if (email) wm.querySelectorAll("div").forEach(d => { d.textContent = `Uso interno — ${email} — Equipe de Planejamento — `.repeat(4); });
-  }, 1500);
 
-  // 3) Block PrintScreen key
+  // Update with real email once auth resolves
+  setTimeout(() => {
+    const email = document.querySelector("#authEmail")?.textContent?.trim();
+    if (email) wm.style.backgroundImage = buildWatermark(email);
+  }, 1200);
+
+  // Also listen for authEmail text changes
+  const emailEl = document.querySelector("#authEmail");
+  if (emailEl) {
+    new MutationObserver(() => {
+      const email = emailEl.textContent?.trim();
+      if (email) wm.style.backgroundImage = buildWatermark(email);
+    }).observe(emailEl, { childList: true, characterData: true, subtree: true });
+  }
+
+  // 3) Block known screenshot keys
   window.addEventListener("keydown", (e) => {
     const isCapture =
       e.key === "PrintScreen" ||
-      (e.shiftKey && e.metaKey && (e.key === "3" || e.key === "4" || e.key === "s" || e.key === "S")) || // macOS
       (e.shiftKey && e.key === "PrintScreen") ||
-      (e.ctrlKey && e.shiftKey && (e.key === "s" || e.key === "S")) ||
-      (e.metaKey && e.shiftKey && e.key === "S");
+      (e.shiftKey && e.metaKey && ["3","4","s","S"].includes(e.key)); // macOS
     if (isCapture) {
       e.preventDefault();
       showCaptureBlock();
     }
   });
 
-  // 4) Detect Win+Shift+S (Snipping Tool) via clipboard write attempt and visibility change
+  // 4) Win+Shift+S opens Snipping Tool which briefly hides the window
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) showCaptureBlock();
-    else hideCaptureBlock();
+    else setTimeout(hideCaptureBlock, 400);
   });
 
-  // 5) Block right-click context menu to prevent "Save as image"
+  // 5) Disable right-click to prevent "Save image as"
   document.addEventListener("contextmenu", (e) => e.preventDefault());
 
   function showCaptureBlock() {
     overlay.style.display = "flex";
-    setTimeout(hideCaptureBlock, 2800);
+    setTimeout(hideCaptureBlock, 2500);
   }
   function hideCaptureBlock() { overlay.style.display = "none"; }
 })();

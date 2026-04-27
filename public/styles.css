@@ -336,7 +336,12 @@ button, input, select, textarea { font: inherit; }
 /* ── Dashboard Grid ── */
 
 .workspace-panel { border-radius: 30px; padding: 24px; overflow: hidden; }
-.workspace-panel canvas { border-radius: 0; background: transparent !important; }
+.workspace-panel canvas { background: transparent !important; display: block; }
+.workspace-panel > div[style*="position:relative"],
+.workspace-panel > div[style*="position: relative"] {
+  border-radius: 0;
+  background: transparent;
+}
 
 .panel-heading {
   display: flex;
