@@ -201,6 +201,27 @@ function renderKpis(summary, dist) {
 const CC = { accent:"#0E2E9B", success:"#00965e", grid:"rgba(14,46,155,0.08)", text:"rgba(0,9,40,0.6)" };
 const SC = ["#D63B2F","#E8A300","#8A93B4","#3BA35B","#00965e"];
 
+// Register chartAreaBackground plugin globally
+Chart.register({
+  id: "chartAreaBackground",
+  beforeDraw(chart, _args, opts) {
+    if (!opts?.color) return;
+    const { ctx, chartArea } = chart;
+    if (!chartArea) return;
+    ctx.save();
+    ctx.fillStyle = opts.color;
+    ctx.fillRect(chartArea.left, chartArea.top, chartArea.width, chartArea.height);
+    ctx.restore();
+  },
+});
+
+function destroyChart(key) {
+  if (state.charts[key]) {
+    state.charts[key].destroy();
+    state.charts[key] = null;
+  }
+}
+
 // ── Screenshot / Screen-capture protection ────────────────────────────────
 (function initScreenshotProtection() {
   // 1) Fullscreen block overlay — shown on capture detection
@@ -223,46 +244,6 @@ const SC = ["#D63B2F","#E8A300","#8A93B4","#3BA35B","#00965e"];
     </div>`;
   document.body.appendChild(overlay);
 
-  // 2) SVG-based repeating watermark — uses z-index:1 so it sits ABOVE page bg
-  //    but BELOW interactive elements. Visible in screenshots due to fixed positioning.
-  function buildWatermark(email) {
-    const text = `Uso interno · ${email || "Objetiva"} · Equipe de Planejamento`;
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="200">
-      <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle"
-        font-family="Manrope,Arial,sans-serif" font-size="13" font-weight="600"
-        fill="rgba(0,9,40,0.06)" transform="rotate(-25,240,100)"
-        letter-spacing="2">${text}</text>
-    </svg>`;
-    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
-  }
-
-  const wm = document.createElement("div");
-  wm.id = "wm-layer";
-  Object.assign(wm.style, {
-    position: "fixed", inset: "0",
-    // z-index 1 = above page background, BELOW all content (charts, cards, etc.)
-    zIndex: "1",
-    pointerEvents: "none",
-    userSelect: "none",
-    backgroundRepeat: "repeat",
-    backgroundSize: "480px 200px",
-    backgroundImage: buildWatermark("Objetiva Atacadista"),
-  });
-  document.body.appendChild(wm);
-
-  // Update with real email once auth resolves
-  setTimeout(() => {
-    const email = document.querySelector("#authEmail")?.textContent?.trim();
-    if (email) wm.style.backgroundImage = buildWatermark(email);
-  }, 1200);
-
-  const emailEl = document.querySelector("#authEmail");
-  if (emailEl) {
-    new MutationObserver(() => {
-      const email = emailEl.textContent?.trim();
-      if (email) wm.style.backgroundImage = buildWatermark(email);
-    }).observe(emailEl, { childList: true, characterData: true, subtree: true });
-  }
 
   // 3) Block known screenshot keys
   window.addEventListener("keydown", (e) => {
@@ -276,7 +257,15 @@ const SC = ["#D63B2F","#E8A300","#8A93B4","#3BA35B","#00965e"];
     }
   });
 
-  // 4) Win+Shift+S opens Snipping Tool which briefly hides the window
+  // 4) Win+Shift+S opens Snipping Tool — window loses focus
+  window.addEventListener("blur", () => {
+    showCaptureBlock();
+  });
+  window.addEventListener("focus", () => {
+    hideCaptureBlock();
+  });
+
+  // Legacy visibilitychange fallback
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) showCaptureBlock();
     else setTimeout(hideCaptureBlock, 400);

@@ -345,8 +345,9 @@ button, input, select, textarea { font: inherit; }
 .workspace-panel canvas { background: transparent !important; display: block; }
 .workspace-panel > div[style*="position:relative"],
 .workspace-panel > div[style*="position: relative"] {
-  border-radius: 0;
+  border-radius: inherit;
   background: transparent;
+  overflow: hidden;
 }
 
 .panel-heading {
