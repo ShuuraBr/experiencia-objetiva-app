@@ -36,6 +36,7 @@ body {
     radial-gradient(circle at bottom left, rgba(0, 9, 40, 0.1), transparent 28%),
     var(--bg);
 
+  /* Bloqueia seleção e arrasto de elementos por segurança */
   -webkit-user-select: none;
   -ms-user-select: none;
   user-select: none;
@@ -387,20 +388,24 @@ button, input, select, textarea { font: inherit; }
 /* ── MARCA DE ÁGUA DINÂMICA ── */
 #watermark-layer {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100vw; /* Garante cobertura total */
+  height: 100vh;
   pointer-events: none; 
-  z-index: 2147483647; /* VALOR MÁXIMO ABSOLUTO: Fica sempre visível, mesmo acima da tela preta de proteção */
-  opacity: 0.05; 
+  z-index: 2147483647; 
+  opacity: 0.12; /* Aumentado temporariamente para garantir que é visível (estava 0.05) */
   background-repeat: repeat;
+  background-position: center;
 }
 
 /* ── PROTEÇÃO CONTRA PRINT E ATALHOS ── */
 #security-overlay {
   position: fixed;
-  inset: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: var(--accent-strong);
   color: white;
-  z-index: 9999998; /* Um nível abaixo da marca de água */
+  z-index: 9999998; 
   display: flex;
   align-items: center;
   justify-content: center;

@@ -3,12 +3,12 @@ const metricResponses = document.querySelector("#metricResponses");
 const metricAverage = document.querySelector("#metricAverage");
 const metricSectors = document.querySelector("#metricSectors");
 
-// O e-mail do colaborador logado. (Substitua a lógica pela chamada real da sua API/Auth)
+// Substitua esta linha pela lógica real que obtém o e-mail do utilizador logado no seu sistema
 const loggedUserEmail = localStorage.getItem('userEmail') || 'breno.vilela@objetiva.com.br';
 
 boot();
-setupAggressiveCaptureGuard(); 
-setupWatermark(loggedUserEmail); 
+setupAggressiveCaptureGuard(); // Inicia proteção contra prints
+setupWatermark(loggedUserEmail); // Inicia marca de água
 
 async function boot() {
   try {
@@ -120,38 +120,42 @@ function setupAggressiveCaptureGuard() {
     document.addEventListener('contextmenu', e => e.preventDefault());
 }
 
-// --- Funcionalidade de Marca de Água Dinâmica e Inremovível ---
+// --- Funcionalidade de Marca de Água Dinâmica (Robusta a Falhas) ---
 function setupWatermark(userEmail) {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  
-  canvas.width = 450;
-  canvas.height = 300;
-
-  ctx.translate(canvas.width / 2, canvas.height / 2);
-  ctx.rotate(-Math.PI / 8); 
-  ctx.translate(-canvas.width / 2, -canvas.height / 2);
-
   const text = `Uso Interno - ${userEmail} - Equipe Planejamento`;
-  ctx.fillStyle = 'rgba(0, 9, 40, 1)'; 
-  ctx.font = '500 13px "IBM Plex Mono", monospace';
-  ctx.textAlign = 'center';
 
-  const img = new Image();
-  img.src = '/assets/objetiva-logo.png'; 
+  function buildWatermark(withImage) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      canvas.width = 450;
+      canvas.height = 300;
 
-  img.onload = () => {
-      const imgWidth = 140;
-      const imgHeight = (img.height / img.width) * imgWidth;
-      ctx.drawImage(img, (canvas.width - imgWidth) / 2, (canvas.height / 2) - imgHeight - 15, imgWidth, imgHeight);
-      ctx.fillText(text, canvas.width / 2, (canvas.height / 2) + 20);
-      applyAndProtectWatermark(canvas.toDataURL('image/png'));
-  };
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate(-Math.PI / 8); 
+      ctx.translate(-canvas.width / 2, -canvas.height / 2);
 
-  img.onerror = () => {
-      ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-      applyAndProtectWatermark(canvas.toDataURL('image/png'));
-  };
+      ctx.fillStyle = 'rgba(0, 9, 40, 0.9)'; 
+      ctx.font = '600 14px "IBM Plex Mono", monospace';
+      ctx.textAlign = 'center';
+
+      if (withImage && withImage.complete && withImage.naturalWidth > 0) {
+          const imgWidth = 140;
+          const imgHeight = (withImage.height / withImage.width) * imgWidth;
+          ctx.drawImage(withImage, (canvas.width - imgWidth) / 2, (canvas.height / 2) - imgHeight - 15, imgWidth, imgHeight);
+          ctx.fillText(text, canvas.width / 2, (canvas.height / 2) + 20);
+      } else {
+          // Fallback seguro se a imagem falhar
+          ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+      }
+
+      try {
+          return canvas.toDataURL('image/png');
+      } catch (e) {
+          console.error("Erro de CORS no Canvas. A cair para marca de água em texto.", e);
+          return null; // Força a geração apenas em texto
+      }
+  }
 
   function applyAndProtectWatermark(dataUrl) {
       function createWatermarkLayer() {
@@ -164,7 +168,6 @@ function setupWatermark(userEmail) {
 
       createWatermarkLayer();
 
-      // MutationObserver: Fica de vigia no DOM. Se apagarem a div ou alterarem o CSS, recria-se no mesmo instante.
       const observer = new MutationObserver((mutations) => {
           let needsRespawn = false;
 
@@ -175,7 +178,6 @@ function setupWatermark(userEmail) {
               } else if (mutation.type === 'attributes' && mutation.target.id === 'watermark-layer') {
                   const el = mutation.target;
                   if (el.style.display === 'none' || el.style.opacity === '0' || el.style.visibility === 'hidden') {
-                      // Força as propriedades de visibilidade originais
                       el.style.display = 'block';
                       el.style.visibility = 'visible';
                   }
@@ -183,7 +185,7 @@ function setupWatermark(userEmail) {
           });
 
           if (needsRespawn) {
-              observer.disconnect(); // Desliga momentaneamente para evitar loop infinito
+              observer.disconnect();
               createWatermarkLayer();
               observer.observe(document.body, { childList: true, subtree: true, attributes: true });
           }
@@ -191,4 +193,21 @@ function setupWatermark(userEmail) {
 
       observer.observe(document.body, { childList: true, subtree: true, attributes: true });
   }
+
+  const img = new Image();
+  img.crossOrigin = 'anonymous'; // Essencial para exportar canvas com imagens
+  img.src = '/assets/objetiva-logo.png'; 
+
+  img.onload = () => {
+      let dataUrl = buildWatermark(img);
+      if (!dataUrl) { // Se o CORS contaminar o canvas
+          dataUrl = buildWatermark(null);
+      }
+      applyAndProtectWatermark(dataUrl);
+  };
+
+  img.onerror = () => { // Se o caminho da imagem estiver quebrado
+      const dataUrl = buildWatermark(null);
+      applyAndProtectWatermark(dataUrl);
+  };
 }
