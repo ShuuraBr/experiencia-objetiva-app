@@ -36,7 +36,7 @@ body {
     radial-gradient(circle at bottom left, rgba(0, 9, 40, 0.1), transparent 28%),
     var(--bg);
 
-  /* Bloqueia seleção e arrasto de elementos por segurança */
+  /* Bloqueia a seleção e arrasto de elementos por segurança */
   -webkit-user-select: none;
   -ms-user-select: none;
   user-select: none;
@@ -336,12 +336,12 @@ button, input, select, textarea { font: inherit; }
 .kpi-active-low  { border-color: var(--danger)  !important; background: rgba(214, 59, 47, 0.06); }
 .kpi-active-high { border-color: var(--success) !important; background: rgba(0, 150, 94, 0.06); }
 
-/* ── Dashboard Grid ── */
+/* ── Dashboard Grid (Painéis com Borda Arredondada Corrigida) ── */
 
 .workspace-panel {
   border-radius: var(--radius-lg);
   padding: 24px;
-  overflow: hidden;
+  overflow: hidden; /* Fundamental para o arredondamento funcionar nas margens internas */
   border: 1px solid rgba(14, 46, 155, 0.12);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 248, 255, 0.88));
   box-shadow: 0 18px 38px rgba(0, 9, 40, 0.08);
@@ -382,7 +382,7 @@ button, input, select, textarea { font: inherit; }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   CAMADAS DE SEGURANÇA: MARCA DE ÁGUA & PROTEÇÃO DE ECRÃ
+   SISTEMA DE SEGURANÇA VISUAL
    ═══════════════════════════════════════════════════════════ */
 
 /* ── MARCA DE ÁGUA DINÂMICA ── */
@@ -390,22 +390,24 @@ button, input, select, textarea { font: inherit; }
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw; /* Garante cobertura total */
+  width: 100vw;
   height: 100vh;
-  pointer-events: none; 
-  z-index: 2147483647; 
-  opacity: 0.12; /* Aumentado temporariamente para garantir que é visível (estava 0.05) */
+  pointer-events: none; /* Permite interagir com a aplicação normalmente */
+  z-index: 2147483647; /* Nível máximo do navegador. Fica acima da tela preta de proteção */
   background-repeat: repeat;
-  background-position: center;
+  background-size: 500px 400px;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important; /* A opacidade fina agora está controlada no SVG em si */
 }
 
-/* ── PROTEÇÃO CONTRA PRINT E ATALHOS ── */
+/* ── PROTEÇÃO CONTRA PRINT/ATALHOS ── */
 #security-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  inset: 0;
   background: var(--accent-strong);
   color: white;
-  z-index: 9999998; 
+  z-index: 2147483646; /* Um nível a menos que a marca d'água */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -418,16 +420,17 @@ button, input, select, textarea { font: inherit; }
 .capture-guard-active #security-overlay {
   opacity: 1;
   visibility: visible;
-  transition: none !important; 
+  transition: none !important; /* Entrada no ecrã sem demoras */
 }
 
+/* Esconde instantaneamente as partes com dados para impedir fotografia parcial */
 .capture-guard-active .dashboard-shell,
 .capture-guard-active .login-shell,
 .capture-guard-active .survey-shell,
 .capture-guard-active .hero-shell {
-  opacity: 0; 
+  opacity: 0 !important; 
   pointer-events: none;
-  transition: none !important; 
+  transition: none !important; /* Ação instantânea (0ms) */
 }
 
 .dashboard-shell, .login-shell, .survey-shell, .hero-shell {
@@ -927,6 +930,7 @@ textarea { resize: vertical; }
 
   .survey-selectors { grid-template-columns: 1fr; }
 
+  /* Aplica o bordo arredondado de 18px especificamente em mobile */
   .workspace-panel {
     border-radius: var(--radius-md) !important;
     padding: 16px;

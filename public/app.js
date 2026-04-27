@@ -3,12 +3,12 @@ const metricResponses = document.querySelector("#metricResponses");
 const metricAverage = document.querySelector("#metricAverage");
 const metricSectors = document.querySelector("#metricSectors");
 
-// Substitua esta linha pela lógica real que obtém o e-mail do utilizador logado no seu sistema
+// E-mail do utilizador logado (Substitua pela lógica real de sessão do seu sistema)
 const loggedUserEmail = localStorage.getItem('userEmail') || 'breno.vilela@objetiva.com.br';
 
 boot();
-setupAggressiveCaptureGuard(); // Inicia proteção contra prints
-setupWatermark(loggedUserEmail); // Inicia marca de água
+setupAggressiveCaptureGuard(); 
+setupWatermark(loggedUserEmail);
 
 async function boot() {
   try {
@@ -75,20 +75,26 @@ async function fetchJson(url, options = {}) {
   return response.json();
 }
 
-// --- Funcionalidade Anti-Captura de Ecrã (Ultra Rápida) ---
+// ═══════════════════════════════════════════════════════════
+//   PROTEÇÃO CONTRA CAPTURA DE ECRÃ (INSTANTÂNEA)
+// ═══════════════════════════════════════════════════════════
 function setupAggressiveCaptureGuard() {
     const body = document.body;
     
-    const overlay = document.createElement('div');
-    overlay.id = 'security-overlay';
-    overlay.innerHTML = '<div style="text-align: center;"><div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div><h2>Proteção de Ecrã Ativa</h2><p>A captura de dados é restrita por motivos de segurança.</p></div>';
-    body.appendChild(overlay);
+    // Cria o ecrã de segurança se não existir
+    if (!document.getElementById('security-overlay')) {
+        const overlay = document.createElement('div');
+        overlay.id = 'security-overlay';
+        overlay.innerHTML = '<div style="text-align: center;"><div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div><h2>Proteção de Ecrã Ativa</h2><p>A captura de dados é restrita por motivos de segurança.</p></div>';
+        body.appendChild(overlay);
+    }
 
     let keysPressed = {};
 
     window.addEventListener('keydown', (e) => {
         keysPressed[e.key] = true;
         
+        // Deteta atalhos do Windows (Win+Shift+S) ou PrintScreen
         if ((keysPressed['Meta'] && keysPressed['Shift']) || (keysPressed['OS'] && keysPressed['Shift']) || e.key === 'PrintScreen' || e.key === 'F12') {
             body.classList.add('capture-guard-active');
         }
@@ -97,117 +103,74 @@ function setupAggressiveCaptureGuard() {
     window.addEventListener('keyup', (e) => {
         keysPressed[e.key] = false;
         
+        // Restaura apenas se as teclas ativadoras forem largadas
         if (!keysPressed['Meta'] && !keysPressed['OS'] && !keysPressed['Shift']) {
-            setTimeout(() => {
-                if (document.hasFocus()) {
-                    body.classList.remove('capture-guard-active');
-                }
+            setTimeout(() => { 
+                if (document.hasFocus()) body.classList.remove('capture-guard-active'); 
             }, 300);
         }
     });
 
-    window.addEventListener('blur', () => {
+    // Perda de foco (ferramenta de recorte ativa)
+    window.addEventListener('blur', () => { 
         keysPressed = {}; 
-        body.classList.add('capture-guard-active');
+        body.classList.add('capture-guard-active'); 
     });
 
-    window.addEventListener('focus', () => {
-        setTimeout(() => {
-            body.classList.remove('capture-guard-active');
-        }, 200);
+    // Retorno à página
+    window.addEventListener('focus', () => { 
+        setTimeout(() => { body.classList.remove('capture-guard-active'); }, 200); 
     });
     
+    // Bloqueia clique direito
     document.addEventListener('contextmenu', e => e.preventDefault());
 }
 
-// --- Funcionalidade de Marca de Água Dinâmica (Robusta a Falhas) ---
+// ═══════════════════════════════════════════════════════════
+//   MARCA DE ÁGUA DINÂMICA (SVG + OBSERVER)
+// ═══════════════════════════════════════════════════════════
 function setupWatermark(userEmail) {
-  const text = `Uso Interno - ${userEmail} - Equipe Planejamento`;
+    const watermarkText = `USO INTERNO - ${userEmail.toUpperCase()} - EQUIPE PLANEJAMENTO`;
+    
+    function createLayer() {
+        if (document.getElementById('watermark-layer')) return;
 
-  function buildWatermark(withImage) {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      canvas.width = 450;
-      canvas.height = 300;
+        const overlay = document.createElement('div');
+        overlay.id = 'watermark-layer';
+        
+        // Gera um SVG como Background Image. 
+        // Resolve problemas de CORS e Tainting, pois é processado localmente e instantaneamente.
+        const svgString = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="500" height="400">
+                <style>
+                    .txt { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; fill: rgba(0, 9, 40, 0.18); }
+                </style>
+                <g transform="rotate(-25, 250, 200)">
+                    <image href="/assets/objetiva-logo.png" x="175" y="140" width="150" opacity="0.12" />
+                    <text x="250" y="240" class="txt" text-anchor="middle">${watermarkText}</text>
+                </g>
+            </svg>
+        `;
+        
+        // Codifica o SVG para Base64 para usar em CSS
+        const encodedSvg = btoa(unescape(encodeURIComponent(svgString)));
+        overlay.style.backgroundImage = `url("data:image/svg+xml;base64,${encodedSvg}")`;
+        document.body.appendChild(overlay);
+    }
 
-      ctx.translate(canvas.width / 2, canvas.height / 2);
-      ctx.rotate(-Math.PI / 8); 
-      ctx.translate(-canvas.width / 2, -canvas.height / 2);
+    createLayer();
 
-      ctx.fillStyle = 'rgba(0, 9, 40, 0.9)'; 
-      ctx.font = '600 14px "IBM Plex Mono", monospace';
-      ctx.textAlign = 'center';
+    // Vigia o DOM para evitar que removam a marca de água pelo "Inspecionar Elemento"
+    const observer = new MutationObserver(() => {
+        const layer = document.getElementById('watermark-layer');
+        if (!layer) {
+            createLayer();
+        } else if (layer.style.display === 'none' || layer.style.opacity === '0' || layer.style.visibility === 'hidden') {
+            layer.style.display = 'block';
+            layer.style.opacity = '1';
+            layer.style.visibility = 'visible';
+        }
+    });
 
-      if (withImage && withImage.complete && withImage.naturalWidth > 0) {
-          const imgWidth = 140;
-          const imgHeight = (withImage.height / withImage.width) * imgWidth;
-          ctx.drawImage(withImage, (canvas.width - imgWidth) / 2, (canvas.height / 2) - imgHeight - 15, imgWidth, imgHeight);
-          ctx.fillText(text, canvas.width / 2, (canvas.height / 2) + 20);
-      } else {
-          // Fallback seguro se a imagem falhar
-          ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-      }
-
-      try {
-          return canvas.toDataURL('image/png');
-      } catch (e) {
-          console.error("Erro de CORS no Canvas. A cair para marca de água em texto.", e);
-          return null; // Força a geração apenas em texto
-      }
-  }
-
-  function applyAndProtectWatermark(dataUrl) {
-      function createWatermarkLayer() {
-          if (document.getElementById('watermark-layer')) return;
-          const overlay = document.createElement('div');
-          overlay.id = 'watermark-layer';
-          overlay.style.backgroundImage = `url(${dataUrl})`;
-          document.body.appendChild(overlay);
-      }
-
-      createWatermarkLayer();
-
-      const observer = new MutationObserver((mutations) => {
-          let needsRespawn = false;
-
-          mutations.forEach((mutation) => {
-              if (mutation.type === 'childList') {
-                  const watermarkNode = document.getElementById('watermark-layer');
-                  if (!watermarkNode) needsRespawn = true;
-              } else if (mutation.type === 'attributes' && mutation.target.id === 'watermark-layer') {
-                  const el = mutation.target;
-                  if (el.style.display === 'none' || el.style.opacity === '0' || el.style.visibility === 'hidden') {
-                      el.style.display = 'block';
-                      el.style.visibility = 'visible';
-                  }
-              }
-          });
-
-          if (needsRespawn) {
-              observer.disconnect();
-              createWatermarkLayer();
-              observer.observe(document.body, { childList: true, subtree: true, attributes: true });
-          }
-      });
-
-      observer.observe(document.body, { childList: true, subtree: true, attributes: true });
-  }
-
-  const img = new Image();
-  img.crossOrigin = 'anonymous'; // Essencial para exportar canvas com imagens
-  img.src = '/assets/objetiva-logo.png'; 
-
-  img.onload = () => {
-      let dataUrl = buildWatermark(img);
-      if (!dataUrl) { // Se o CORS contaminar o canvas
-          dataUrl = buildWatermark(null);
-      }
-      applyAndProtectWatermark(dataUrl);
-  };
-
-  img.onerror = () => { // Se o caminho da imagem estiver quebrado
-      const dataUrl = buildWatermark(null);
-      applyAndProtectWatermark(dataUrl);
-  };
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
 }
