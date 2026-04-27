@@ -200,7 +200,108 @@ function renderKpis(summary, dist) {
 // ---------------------------------------------------------------------------
 const CC = { accent:"#0E2E9B", success:"#00965e", grid:"rgba(14,46,155,0.08)", text:"rgba(0,9,40,0.6)" };
 const SC = ["#D63B2F","#E8A300","#8A93B4","#3BA35B","#00965e"];
-function destroyChart(k) { if (state.charts[k]) { state.charts[k].destroy(); delete state.charts[k]; } }
+
+// Make all Chart.js canvas backgrounds transparent (no white fill)
+Chart.register({
+  id: "transparentBackground",
+  beforeDraw(chart) {
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.globalCompositeOperation = "destination-over";
+    ctx.fillStyle = "transparent";
+    ctx.fillRect(0, 0, chart.width, chart.height);
+    ctx.restore();
+  }
+});
+// Remove Chart.js default white background globally
+Chart.defaults.backgroundColor = "transparent";
+
+// ── Screenshot / Screen-capture protection ────────────────────────────────
+(function initScreenshotProtection() {
+  // 1) Overlay element shown when capture is detected
+  const overlay = document.createElement("div");
+  overlay.id = "screenshot-overlay";
+  Object.assign(overlay.style, {
+    position: "fixed", inset: "0", zIndex: "999999",
+    background: "rgba(0,9,40,0.96)",
+    display: "none", alignItems: "center", justifyContent: "center",
+    flexDirection: "column", gap: "16px",
+    fontFamily: "Manrope, sans-serif",
+    color: "rgba(255,255,255,0.9)",
+    pointerEvents: "none",
+  });
+  overlay.innerHTML = `
+    <div style="font-size:3rem;">🔒</div>
+    <div style="font-size:1.4rem;font-weight:700;letter-spacing:-0.03em;">Captura de tela bloqueada</div>
+    <div style="font-size:0.9rem;opacity:0.65;max-width:340px;text-align:center;line-height:1.6;">
+      Este painel é de uso exclusivo interno.<br>A captura de tela não é permitida.
+    </div>`;
+  document.body.appendChild(overlay);
+
+  // 2) Persistent diagonal watermark over the whole dashboard
+  const wm = document.createElement("div");
+  wm.id = "wm-layer";
+  Object.assign(wm.style, {
+    position: "fixed", inset: "0", zIndex: "9998",
+    pointerEvents: "none", overflow: "hidden",
+    userSelect: "none",
+  });
+  // Tile a repeating diagonal text watermark
+  const userEmail = document.querySelector("#authEmail")?.textContent || "Objetiva Atacadista";
+  const wmText = `Uso interno — ${userEmail} — Equipe de Planejamento`.repeat(4);
+  for (let i = 0; i < 8; i++) {
+    const row = document.createElement("div");
+    Object.assign(row.style, {
+      position: "absolute",
+      top: `${i * 13}%`,
+      left: "-10%",
+      width: "120%",
+      whiteSpace: "nowrap",
+      transform: `rotate(-22deg)`,
+      fontSize: "0.72rem",
+      fontWeight: "600",
+      color: "rgba(0,9,40,0.055)",
+      letterSpacing: "0.12em",
+    });
+    row.textContent = wmText;
+    wm.appendChild(row);
+  }
+  document.body.appendChild(wm);
+  // Update watermark text after auth loads
+  setTimeout(() => {
+    const email = document.querySelector("#authEmail")?.textContent;
+    if (email) wm.querySelectorAll("div").forEach(d => { d.textContent = `Uso interno — ${email} — Equipe de Planejamento — `.repeat(4); });
+  }, 1500);
+
+  // 3) Block PrintScreen key
+  window.addEventListener("keydown", (e) => {
+    const isCapture =
+      e.key === "PrintScreen" ||
+      (e.shiftKey && e.metaKey && (e.key === "3" || e.key === "4" || e.key === "s" || e.key === "S")) || // macOS
+      (e.shiftKey && e.key === "PrintScreen") ||
+      (e.ctrlKey && e.shiftKey && (e.key === "s" || e.key === "S")) ||
+      (e.metaKey && e.shiftKey && e.key === "S");
+    if (isCapture) {
+      e.preventDefault();
+      showCaptureBlock();
+    }
+  });
+
+  // 4) Detect Win+Shift+S (Snipping Tool) via clipboard write attempt and visibility change
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) showCaptureBlock();
+    else hideCaptureBlock();
+  });
+
+  // 5) Block right-click context menu to prevent "Save as image"
+  document.addEventListener("contextmenu", (e) => e.preventDefault());
+
+  function showCaptureBlock() {
+    overlay.style.display = "flex";
+    setTimeout(hideCaptureBlock, 2800);
+  }
+  function hideCaptureBlock() { overlay.style.display = "none"; }
+})();
 
 function renderCharts(d) {
   renderTrendChart(d.trend);
@@ -222,7 +323,7 @@ function renderTrendChart(trend) {
         pointBackgroundColor:CC.success, pointRadius:4 },
     ]},
     options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ labels:{ color:CC.text, font:{family:"Manrope"} } } },
+      plugins:{ legend:{ labels:{ color:CC.text, font:{family:"Manrope"} } }, chartAreaBackground:{color:"transparent"} },
       scales:{
         x:{ grid:{color:CC.grid}, ticks:{color:CC.text,font:{family:"Manrope"}} },
         yCount:{ type:"linear", position:"left", grid:{color:CC.grid}, ticks:{color:CC.text,font:{family:"Manrope"},stepSize:1} },
@@ -393,56 +494,136 @@ function renderQuestionsContent(container, questions) {
     </div>`).join("");
 }
 
-// ── Score-specific modal: shows which questions received a given score level ──
-function openScoreModal(score, label) {
+// ── Score-specific modal: Por Setor / Por Colaborador / Por Pergunta ──
+async function openScoreModal(score, label) {
   if (!modalTitle) return;
   const COLORS = { 1:"#D63B2F", 2:"#E8A300", 3:"#8A93B4", 4:"#3BA35B", 5:"#00965e" };
-  modalTitle.textContent = `Perguntas avaliadas como ${label}`;
-  // Use single-tab mode — only sector tab visible, employee/questions hidden
+  const color = COLORS[score];
+
+  modalTitle.innerHTML = `<span style="color:${color}">${label}</span> — Detalhamento`;
+
+  // Restore all tabs visibility (may have been hidden by previous call)
+  tabEmployee.style.display = "";
+  tabQuestions && (tabQuestions.style.display = "");
+
+  // Switch to first tab
   tabSector.classList.add("active");
   tabEmployee.classList.remove("active");
   tabQuestions?.classList.remove("active");
-  tabEmployee.style.display = "none";
-  tabQuestions && (tabQuestions.style.display = "none");
-  modalContentSector.hidden = false;
+  modalContentSector.hidden   = false;
   modalContentEmployee.hidden = true;
   if (modalContentQuestions) modalContentQuestions.hidden = true;
+
+  modalContentSector.innerHTML   = `<p class="empty-state">Carregando...</p>`;
+  modalContentEmployee.innerHTML = `<p class="empty-state">Carregando...</p>`;
+  if (modalContentQuestions) modalContentQuestions.innerHTML = `<p class="empty-state">Carregando...</p>`;
+
   openModal();
 
-  const questions = state.questionsByScore[score] || [];
-  if (!questions.length) {
-    modalContentSector.innerHTML = `<p class="empty-state">Nenhuma avaliação com nota ${label} ainda.</p>`;
-  } else {
-    const color = COLORS[score];
-    const total = questions.reduce((s, q) => s + q.count, 0);
-    const max   = Math.max(...questions.map(q => q.count), 1);
-    modalContentSector.innerHTML = `
-      <p style="margin:0 0 4px;font-size:0.82rem;color:var(--text-soft);">
-        ${total} resposta${total !== 1 ? "s" : ""} com essa avaliação — por pergunta:
-      </p>
-      ${questions.map((q) => {
-        const pct = Math.round((q.count / max) * 100);
-        return `<article class="ranking-row">
-          <div class="ranking-info" style="flex:1;">
-            <strong style="font-size:0.9rem;line-height:1.4;">${escapeHtml(q.text)}</strong>
-          </div>
-          <div class="ranking-bar-wrap" style="width:140px;">
-            <div class="ranking-bar"><span style="width:${pct}%;background:${color};"></span></div>
-            <span class="ranking-count">${q.count}×</span>
-          </div>
-        </article>`;
-      }).join("")}`;
-  }
+  try {
+    const qRank = new URLSearchParams({ type: String(score) });
+    const qBase = new URLSearchParams();
+    if (state.filterSectorId)  { qRank.set("sectorId",  state.filterSectorId);  qBase.set("sectorId",  state.filterSectorId); }
+    if (state.filterStartDate) { qRank.set("startDate", state.filterStartDate); qBase.set("startDate", state.filterStartDate); }
+    if (state.filterEndDate)   { qRank.set("endDate",   state.filterEndDate);   qBase.set("endDate",   state.filterEndDate); }
 
-  // Restore tabs visibility on modal close
-  const onClose = () => {
-    tabEmployee.style.display = "";
-    tabQuestions && (tabQuestions.style.display = "");
-    modalOverlay?.removeEventListener("click", onClose);
-    document.querySelector("#modalClose")?.removeEventListener("click", onClose);
-  };
-  modalOverlay?.addEventListener("click", onClose);
-  document.querySelector("#modalClose")?.addEventListener("click", onClose);
+    const [{ ranking }, { questions }] = await Promise.all([
+      fetchJson(`/api/dashboard/ranking?${qRank}`),
+      fetchJson(`/api/dashboard/questions?${qBase}`),
+    ]);
+
+    // ── Por Setor ──
+    if (!ranking.bySector.length) {
+      modalContentSector.innerHTML = `<p class="empty-state">Nenhum setor avaliado com ${label} ainda.</p>`;
+    } else {
+      const maxR = Math.max(...ranking.bySector.map(r => r.responses), 1);
+      modalContentSector.innerHTML = `
+        <p class="score-modal-summary">
+          <span class="score-badge" style="background:${color}20;color:${color};border-color:${color}40;">${label}</span>
+          ${ranking.bySector.reduce((s,r)=>s+r.responses,0)} resposta(s) — ordenado por quantidade
+        </p>
+        ${ranking.bySector.map((r,i)=>`
+          <article class="ranking-row">
+            <span class="ranking-pos">${i+1}</span>
+            <div class="ranking-info">
+              <strong>${escapeHtml(r.label)}</strong>
+              <span class="ranking-meta">${escapeHtml(r.category||"")} · Média geral: ${r.average_score??'--'}/5</span>
+            </div>
+            <div class="ranking-bar-wrap">
+              <div class="ranking-bar"><span style="width:${(r.responses/maxR)*100}%;background:${color};"></span></div>
+              <span class="ranking-count">${r.responses} resp.</span>
+            </div>
+          </article>`).join("")}`;
+    }
+
+    // ── Por Colaborador ──
+    if (!ranking.byEmployee.length) {
+      modalContentEmployee.innerHTML = `<p class="empty-state">Nenhum colaborador avaliado com ${label} ainda.</p>`;
+    } else {
+      const maxE = Math.max(...ranking.byEmployee.map(r => r.responses), 1);
+      modalContentEmployee.innerHTML = `
+        <p class="score-modal-summary">
+          <span class="score-badge" style="background:${color}20;color:${color};border-color:${color}40;">${label}</span>
+          ${ranking.byEmployee.reduce((s,r)=>s+r.responses,0)} resposta(s) — ordenado por quantidade
+        </p>
+        ${ranking.byEmployee.map((r,i)=>`
+          <article class="ranking-row">
+            <span class="ranking-pos">${i+1}</span>
+            <div class="ranking-info">
+              <strong>${escapeHtml(r.label)}</strong>
+              <span class="ranking-meta">${escapeHtml(r.sector_name||"")} · Média geral: ${r.average_score??'--'}/5</span>
+            </div>
+            <div class="ranking-bar-wrap">
+              <div class="ranking-bar"><span style="width:${(r.responses/maxE)*100}%;background:${color};"></span></div>
+              <span class="ranking-count">${r.responses} resp.</span>
+            </div>
+          </article>`).join("")}`;
+    }
+
+    // ── Por Pergunta — filtra apenas contagem do score clicado ──
+    if (modalContentQuestions) {
+      const filtered = questions.map(q => ({
+        ...q,
+        scoreCount: q.counts[score] || 0,
+      })).filter(q => q.scoreCount > 0).sort((a,b) => b.scoreCount - a.scoreCount);
+
+      if (!filtered.length) {
+        modalContentQuestions.innerHTML = `<p class="empty-state">Nenhuma pergunta avaliada com ${label} ainda.</p>`;
+      } else {
+        const maxQ = Math.max(...filtered.map(q => q.scoreCount), 1);
+        // Group by sector
+        const bySector = {};
+        for (const q of filtered) {
+          if (!bySector[q.sectorName]) bySector[q.sectorName] = [];
+          bySector[q.sectorName].push(q);
+        }
+        modalContentQuestions.innerHTML = `
+          <p class="score-modal-summary">
+            <span class="score-badge" style="background:${color}20;color:${color};border-color:${color}40;">${label}</span>
+            ${filtered.reduce((s,q)=>s+q.scoreCount,0)} resposta(s) — por pergunta
+          </p>
+          ${Object.entries(bySector).map(([sector, qs]) => `
+            <div class="score-sector-group">
+              <p class="score-sector-label">${escapeHtml(sector)}</p>
+              ${qs.map(q => {
+                const pct = Math.round((q.scoreCount / maxQ) * 100);
+                return `<article class="score-question-row">
+                  <p class="score-question-text">${escapeHtml(q.text)}</p>
+                  <div class="score-question-meter">
+                    <div class="score-question-bar">
+                      <span style="width:${pct}%;background:${color};"></span>
+                    </div>
+                    <span class="score-question-count" style="color:${color};">${q.scoreCount}×</span>
+                  </div>
+                </article>`;
+              }).join("")}
+            </div>`).join("")}`;
+      }
+    }
+
+  } catch (err) {
+    modalContentSector.innerHTML = `<p class="empty-state">Erro ao carregar: ${escapeHtml(err.message)}</p>`;
+  }
 }
 
 function renderRankingContent(container, rows, subtitleKey) {

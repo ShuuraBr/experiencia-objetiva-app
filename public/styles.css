@@ -335,7 +335,8 @@ button, input, select, textarea { font: inherit; }
 
 /* ── Dashboard Grid ── */
 
-.workspace-panel { border-radius: 30px; padding: 24px; }
+.workspace-panel { border-radius: 30px; padding: 24px; overflow: hidden; }
+.workspace-panel canvas { border-radius: 0; background: transparent !important; }
 
 .panel-heading {
   display: flex;
@@ -1169,4 +1170,90 @@ textarea { resize: vertical; }
 @media (max-width: 560px) {
   .q-score-row { grid-template-columns: 80px 1fr 28px; }
   .q-score-label { font-size: 0.68rem; }
+}
+
+/* ── Score Modal — Per-score detail (setor / colaborador / pergunta) ── */
+.score-modal-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  font-size: 0.82rem;
+  color: var(--text-soft);
+}
+
+.score-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ranking-meta {
+  font-size: 0.78rem;
+  color: var(--text-soft);
+}
+
+.score-sector-group {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.score-sector-label {
+  margin: 0 0 2px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+}
+
+.score-question-row {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.8);
+  border: 1px solid var(--line);
+}
+
+.score-question-text {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.score-question-meter {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.score-question-bar {
+  height: 8px;
+  background: rgba(0,9,40,0.07);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.score-question-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 500ms ease;
+}
+
+.score-question-count {
+  font-size: 0.82rem;
+  font-weight: 800;
+  min-width: 28px;
+  text-align: right;
 }
