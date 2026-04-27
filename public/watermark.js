@@ -27,7 +27,7 @@
 
   /* ── 4. Carregar logo ── */
   const logo = new Image();
-  logo.src = '/assets/objetiva-logo.png';
+  logo.src = '/assets/Logotipo-cores-institucionais-vetorizada-removebg-preview.png';
 
   function renderTile() {
     ctx.clearRect(0, 0, TILE_W, TILE_H);
@@ -47,13 +47,6 @@
       const lh = 36;
       const lw = lh * aspect;
       const logoY = userEmail ? cy - 26 : cy - 18;
-
-      /* Fundo escuro sutil atrás da logo branca para dar contraste */
-      ctx.globalAlpha = 0.08;
-      ctx.fillStyle = '#0E2E9B';
-      ctx.beginPath();
-      ctx.roundRect(cx - lw / 2 - 8, logoY - 6, lw + 16, lh + 12, 6);
-      ctx.fill();
 
       /* Logo em si */
       ctx.globalAlpha = 0.22;
