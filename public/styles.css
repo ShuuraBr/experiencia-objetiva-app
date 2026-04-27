@@ -398,7 +398,7 @@ button, input, select, textarea { font: inherit; }
   background-size: 500px 400px;
   display: block !important;
   visibility: visible !important;
-  opacity: 1 !important; /* A opacidade fina agora está controlada no SVG em si */
+  opacity: 3 !important; /* A opacidade fina agora está controlada no SVG em si */
 }
 
 /* ── PROTEÇÃO CONTRA PRINT/ATALHOS ── */
