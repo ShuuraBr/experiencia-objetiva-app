@@ -1,6 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap");
 
-/* Garante que hidden funcione mesmo com display:flex/grid no CSS */
 [hidden] { display: none !important; }
 
 :root {
@@ -37,7 +36,6 @@ body {
     radial-gradient(circle at bottom left, rgba(0, 9, 40, 0.1), transparent 28%),
     var(--bg);
 
-  /* Bloqueia seleção e arrasto de elementos por segurança */
   -webkit-user-select: none;
   -ms-user-select: none;
   user-select: none;
@@ -383,16 +381,16 @@ button, input, select, textarea { font: inherit; }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   CAMADAS DE SEGURANÇA: MARCA D'ÁGUA & PROTEÇÃO DE ECRÃ
+   CAMADAS DE SEGURANÇA: MARCA DE ÁGUA & PROTEÇÃO DE ECRÃ
    ═══════════════════════════════════════════════════════════ */
 
-/* ── MARCA D'ÁGUA DINÂMICA ── */
+/* ── MARCA DE ÁGUA DINÂMICA ── */
 #watermark-layer {
   position: fixed;
   inset: 0;
-  pointer-events: none; /* Permite que o mouse clique através do elemento */
-  z-index: 9998; /* Fica acima de quase tudo, exceto o ecrã de segurança final */
-  opacity: 0.05; /* Transparência muito sutil: 5% visível */
+  pointer-events: none; 
+  z-index: 2147483647; /* VALOR MÁXIMO ABSOLUTO: Fica sempre visível, mesmo acima da tela preta de proteção */
+  opacity: 0.05; 
   background-repeat: repeat;
 }
 
@@ -402,7 +400,7 @@ button, input, select, textarea { font: inherit; }
   inset: 0;
   background: var(--accent-strong);
   color: white;
-  z-index: 9999999;
+  z-index: 9999998; /* Um nível abaixo da marca de água */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -924,7 +922,6 @@ textarea { resize: vertical; }
 
   .survey-selectors { grid-template-columns: 1fr; }
 
-  /* Ajuste específico para garantir bordas arredondadas em mobile */
   .workspace-panel {
     border-radius: var(--radius-md) !important;
     padding: 16px;

@@ -3,12 +3,12 @@ const metricResponses = document.querySelector("#metricResponses");
 const metricAverage = document.querySelector("#metricAverage");
 const metricSectors = document.querySelector("#metricSectors");
 
-// Substitua esta linha pela lógica real que obtém o e-mail do utilizador logado no seu sistema
-const loggedUserEmail = localStorage.getItem('userEmail') || 'nome.sobrenome@objetiva.com.br';
+// O e-mail do colaborador logado. (Substitua a lógica pela chamada real da sua API/Auth)
+const loggedUserEmail = localStorage.getItem('userEmail') || 'breno.vilela@objetiva.com.br';
 
 boot();
-setupAggressiveCaptureGuard(); // Proteção contra prints
-setupWatermark(loggedUserEmail); // Inicializa a marca d'água em toda a tela
+setupAggressiveCaptureGuard(); 
+setupWatermark(loggedUserEmail); 
 
 async function boot() {
   try {
@@ -79,13 +79,11 @@ async function fetchJson(url, options = {}) {
 function setupAggressiveCaptureGuard() {
     const body = document.body;
     
-    // 1. Cria a tela de bloqueio dinamicamente
     const overlay = document.createElement('div');
     overlay.id = 'security-overlay';
     overlay.innerHTML = '<div style="text-align: center;"><div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div><h2>Proteção de Ecrã Ativa</h2><p>A captura de dados é restrita por motivos de segurança.</p></div>';
     body.appendChild(overlay);
 
-    // Dicionário para rastrear as teclas pressionadas em tempo real
     let keysPressed = {};
 
     window.addEventListener('keydown', (e) => {
@@ -122,58 +120,75 @@ function setupAggressiveCaptureGuard() {
     document.addEventListener('contextmenu', e => e.preventDefault());
 }
 
-// --- Funcionalidade de Marca d'Água Dinâmica ---
+// --- Funcionalidade de Marca de Água Dinâmica e Inremovível ---
 function setupWatermark(userEmail) {
-  // 1. Cria um canvas invisível para desenhar o padrão
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   
-  // Define o tamanho de cada bloco da marca d'água (espaçamento)
   canvas.width = 450;
   canvas.height = 300;
 
-  // 2. Configura a rotação (diagonal)
   ctx.translate(canvas.width / 2, canvas.height / 2);
-  ctx.rotate(-Math.PI / 8); // Ângulo suave
+  ctx.rotate(-Math.PI / 8); 
   ctx.translate(-canvas.width / 2, -canvas.height / 2);
 
-  // 3. Configuração do texto
   const text = `Uso Interno - ${userEmail} - Equipe Planejamento`;
-  ctx.fillStyle = 'rgba(0, 9, 40, 1)'; // Cor base escura (a transparência será controlada pelo CSS)
+  ctx.fillStyle = 'rgba(0, 9, 40, 1)'; 
   ctx.font = '500 13px "IBM Plex Mono", monospace';
   ctx.textAlign = 'center';
 
-  // 4. Carrega a logo
   const img = new Image();
-  img.src = '/assets/objetiva-logo.png'; // O caminho da logo baseado no seu repositório
+  img.src = '/assets/objetiva-logo.png'; 
 
-  // Função para desenhar e aplicar após imagem carregar
   img.onload = () => {
-      // Desenha a logo centralizada (ajuste o 120 para alterar o tamanho da logo)
       const imgWidth = 140;
       const imgHeight = (img.height / img.width) * imgWidth;
       ctx.drawImage(img, (canvas.width - imgWidth) / 2, (canvas.height / 2) - imgHeight - 15, imgWidth, imgHeight);
-
-      // Desenha o texto abaixo da logo
       ctx.fillText(text, canvas.width / 2, (canvas.height / 2) + 20);
-
-      applyWatermarkToDOM(canvas.toDataURL('image/png'));
+      applyAndProtectWatermark(canvas.toDataURL('image/png'));
   };
 
-  // Se a imagem falhar (caminho errado, etc), desenha só o texto
   img.onerror = () => {
       ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-      applyWatermarkToDOM(canvas.toDataURL('image/png'));
+      applyAndProtectWatermark(canvas.toDataURL('image/png'));
   };
 
-  function applyWatermarkToDOM(dataUrl) {
-      // Cria a camada div de sobreposição
-      let overlay = document.getElementById('watermark-layer');
-      if (!overlay) {
-          overlay = document.createElement('div');
+  function applyAndProtectWatermark(dataUrl) {
+      function createWatermarkLayer() {
+          if (document.getElementById('watermark-layer')) return;
+          const overlay = document.createElement('div');
           overlay.id = 'watermark-layer';
+          overlay.style.backgroundImage = `url(${dataUrl})`;
           document.body.appendChild(overlay);
       }
-      overlay.style.backgroundImage = `url(${dataUrl})`;
+
+      createWatermarkLayer();
+
+      // MutationObserver: Fica de vigia no DOM. Se apagarem a div ou alterarem o CSS, recria-se no mesmo instante.
+      const observer = new MutationObserver((mutations) => {
+          let needsRespawn = false;
+
+          mutations.forEach((mutation) => {
+              if (mutation.type === 'childList') {
+                  const watermarkNode = document.getElementById('watermark-layer');
+                  if (!watermarkNode) needsRespawn = true;
+              } else if (mutation.type === 'attributes' && mutation.target.id === 'watermark-layer') {
+                  const el = mutation.target;
+                  if (el.style.display === 'none' || el.style.opacity === '0' || el.style.visibility === 'hidden') {
+                      // Força as propriedades de visibilidade originais
+                      el.style.display = 'block';
+                      el.style.visibility = 'visible';
+                  }
+              }
+          });
+
+          if (needsRespawn) {
+              observer.disconnect(); // Desliga momentaneamente para evitar loop infinito
+              createWatermarkLayer();
+              observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+          }
+      });
+
+      observer.observe(document.body, { childList: true, subtree: true, attributes: true });
   }
 }
