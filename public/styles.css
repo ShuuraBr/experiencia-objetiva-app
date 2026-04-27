@@ -328,20 +328,13 @@ button, input, select, textarea { font: inherit; }
   box-shadow: 0 20px 40px rgba(14, 46, 155, 0.14);
 }
 
-/* ── Score Distribution Row ── */
-
-
-/* Label ocupa linha inteira */
-
 .kpi-active-low  { border-color: var(--danger)  !important; background: rgba(214, 59, 47, 0.06); }
-.kpi-active-low  
-
-.kpi-active-high 
+.kpi-active-high { border-color: var(--success) !important; background: rgba(0, 150, 94, 0.06); }
 
 /* ── Dashboard Grid ── */
 
 .workspace-panel {
-  border-radius: 26px;
+  border-radius: var(--radius-lg);
   padding: 24px;
   overflow: hidden;
   border: 1px solid rgba(14, 46, 155, 0.12);
@@ -426,6 +419,10 @@ textarea { resize: vertical; }
 .bar-row {
   display: grid;
   gap: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.72);
+  border: 1px solid var(--line);
 }
 
 .bar-row-copy {
@@ -812,10 +809,7 @@ textarea { resize: vertical; }
 .signal-item p { margin: 0; color: var(--text-soft); font-size: 0.88rem; }
 
 /* ── Responsive ── */
-@media (max-width: 1280px) {
-  
-  
-}
+@media (max-width: 1280px) { }
 
 @media (max-width: 1100px) {
   .dashboard-grid,
@@ -865,12 +859,6 @@ textarea { resize: vertical; }
     grid-template-columns: 1fr;
   }
 
-  
-
-  
-
-  
-
   .hero-copy { min-height: auto; }
   .hero-copy h2, .survey-hero h1 { max-width: none; }
 
@@ -884,10 +872,15 @@ textarea { resize: vertical; }
   .ranking-bar-wrap { display: none; }
 
   .survey-selectors { grid-template-columns: 1fr; }
+
+  /* Ajuste específico para garantir bordas arredondadas em mobile */
+  .workspace-panel {
+    border-radius: var(--radius-md) !important;
+    padding: 16px;
+  }
 }
 
 @media (max-width: 480px) {
-  
   .feature-strip { grid-template-columns: 1fr; }
 }
 
@@ -1129,9 +1122,6 @@ textarea { resize: vertical; }
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
-
-/* ── dashboard-grid legacy → apenas para mobile fallback ── */
-/* Remove old .dashboard-grid override that conflicted with main-grid */
 
 /* ── Step 4: Border radius fixes — bar-row and other items ── */
 .bar-row {
