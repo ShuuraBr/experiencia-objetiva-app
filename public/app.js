@@ -3,7 +3,12 @@ const metricResponses = document.querySelector("#metricResponses");
 const metricAverage = document.querySelector("#metricAverage");
 const metricSectors = document.querySelector("#metricSectors");
 
+// Substitua esta linha pela lógica real que obtém o e-mail do utilizador logado no seu sistema
+const loggedUserEmail = localStorage.getItem('userEmail') || 'nome.sobrenome@objetiva.com.br';
+
 boot();
+setupAggressiveCaptureGuard(); // Proteção contra prints
+setupWatermark(loggedUserEmail); // Inicializa a marca d'água em toda a tela
 
 async function boot() {
   try {
@@ -86,8 +91,6 @@ function setupAggressiveCaptureGuard() {
     window.addEventListener('keydown', (e) => {
         keysPressed[e.key] = true;
         
-        // Se a tecla Meta (Windows) E a tecla Shift estiverem pressionadas em simultâneo
-        // OU se premir PrintScreen / F12
         if ((keysPressed['Meta'] && keysPressed['Shift']) || (keysPressed['OS'] && keysPressed['Shift']) || e.key === 'PrintScreen' || e.key === 'F12') {
             body.classList.add('capture-guard-active');
         }
@@ -96,7 +99,6 @@ function setupAggressiveCaptureGuard() {
     window.addEventListener('keyup', (e) => {
         keysPressed[e.key] = false;
         
-        // Só remove se já não estiver a carregar no Windows nem no Shift
         if (!keysPressed['Meta'] && !keysPressed['OS'] && !keysPressed['Shift']) {
             setTimeout(() => {
                 if (document.hasFocus()) {
@@ -106,22 +108,72 @@ function setupAggressiveCaptureGuard() {
         }
     });
 
-    // Perda de foco (quando o recorte do Windows assume o controlo do rato/ecrã)
     window.addEventListener('blur', () => {
-        keysPressed = {}; // Limpa o estado das teclas por segurança
+        keysPressed = {}; 
         body.classList.add('capture-guard-active');
     });
 
-    // Quando o utilizador clica de volta na página
     window.addEventListener('focus', () => {
         setTimeout(() => {
             body.classList.remove('capture-guard-active');
         }, 200);
     });
     
-    // Bloqueia clique direito
     document.addEventListener('contextmenu', e => e.preventDefault());
 }
 
-// Inicializa a proteção assim que o DOM carregar
-document.addEventListener('DOMContentLoaded', setupAggressiveCaptureGuard);
+// --- Funcionalidade de Marca d'Água Dinâmica ---
+function setupWatermark(userEmail) {
+  // 1. Cria um canvas invisível para desenhar o padrão
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  
+  // Define o tamanho de cada bloco da marca d'água (espaçamento)
+  canvas.width = 450;
+  canvas.height = 300;
+
+  // 2. Configura a rotação (diagonal)
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.rotate(-Math.PI / 8); // Ângulo suave
+  ctx.translate(-canvas.width / 2, -canvas.height / 2);
+
+  // 3. Configuração do texto
+  const text = `Uso Interno - ${userEmail} - Equipe Planejamento`;
+  ctx.fillStyle = 'rgba(0, 9, 40, 1)'; // Cor base escura (a transparência será controlada pelo CSS)
+  ctx.font = '500 13px "IBM Plex Mono", monospace';
+  ctx.textAlign = 'center';
+
+  // 4. Carrega a logo
+  const img = new Image();
+  img.src = '/assets/objetiva-logo.png'; // O caminho da logo baseado no seu repositório
+
+  // Função para desenhar e aplicar após imagem carregar
+  img.onload = () => {
+      // Desenha a logo centralizada (ajuste o 120 para alterar o tamanho da logo)
+      const imgWidth = 140;
+      const imgHeight = (img.height / img.width) * imgWidth;
+      ctx.drawImage(img, (canvas.width - imgWidth) / 2, (canvas.height / 2) - imgHeight - 15, imgWidth, imgHeight);
+
+      // Desenha o texto abaixo da logo
+      ctx.fillText(text, canvas.width / 2, (canvas.height / 2) + 20);
+
+      applyWatermarkToDOM(canvas.toDataURL('image/png'));
+  };
+
+  // Se a imagem falhar (caminho errado, etc), desenha só o texto
+  img.onerror = () => {
+      ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+      applyWatermarkToDOM(canvas.toDataURL('image/png'));
+  };
+
+  function applyWatermarkToDOM(dataUrl) {
+      // Cria a camada div de sobreposição
+      let overlay = document.getElementById('watermark-layer');
+      if (!overlay) {
+          overlay = document.createElement('div');
+          overlay.id = 'watermark-layer';
+          document.body.appendChild(overlay);
+      }
+      overlay.style.backgroundImage = `url(${dataUrl})`;
+  }
+}

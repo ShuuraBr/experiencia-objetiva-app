@@ -383,9 +383,20 @@ button, input, select, textarea { font: inherit; }
 }
 
 /* ═══════════════════════════════════════════════════════════
-   REGRA DE BLOQUEIO ULTRA RÁPIDA (OPACITY ZERO)
+   CAMADAS DE SEGURANÇA: MARCA D'ÁGUA & PROTEÇÃO DE ECRÃ
    ═══════════════════════════════════════════════════════════ */
 
+/* ── MARCA D'ÁGUA DINÂMICA ── */
+#watermark-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none; /* Permite que o mouse clique através do elemento */
+  z-index: 9998; /* Fica acima de quase tudo, exceto o ecrã de segurança final */
+  opacity: 0.05; /* Transparência muito sutil: 5% visível */
+  background-repeat: repeat;
+}
+
+/* ── PROTEÇÃO CONTRA PRINT E ATALHOS ── */
 #security-overlay {
   position: fixed;
   inset: 0;
@@ -398,14 +409,13 @@ button, input, select, textarea { font: inherit; }
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  /* Transição suave APENAS para desaparecer. A entrada é a 0ms */
   transition: opacity 300ms ease, visibility 300ms ease;
 }
 
 .capture-guard-active #security-overlay {
   opacity: 1;
   visibility: visible;
-  transition: none !important; /* Entrada instantânea */
+  transition: none !important; 
 }
 
 .capture-guard-active .dashboard-shell,
@@ -414,10 +424,9 @@ button, input, select, textarea { font: inherit; }
 .capture-guard-active .hero-shell {
   opacity: 0; 
   pointer-events: none;
-  transition: none !important; /* Desaparece instantaneamente */
+  transition: none !important; 
 }
 
-/* Retorno ao normal para as áreas principais */
 .dashboard-shell, .login-shell, .survey-shell, .hero-shell {
   transition: opacity 300ms ease;
 }
