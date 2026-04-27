@@ -1,26 +1,22 @@
 /**
  * watermark.js — Marca d'água interna
- * Gera um overlay em canvas com: logo + email do usuário + "USO INTERNO" + "EQUIPE PLANEJAMENTO"
+ * Gera um overlay em canvas com: logo + e-mail do usuário logado (ou só logo se não autenticado).
  * Injetado em todas as páginas para rastreabilidade e proteção contra plágio.
  */
 (async function initWatermark() {
   /* ── 1. Buscar dados do usuário autenticado ── */
   let userEmail = '';
-  let userName  = '';
   try {
     const res = await fetch('/api/auth/me');
     if (res.ok) {
       const d = await res.json();
-      if (d.authenticated) {
-        userEmail = d.email || '';
-        userName  = d.name  || '';
-      }
+      if (d.authenticated) userEmail = d.email || '';
     }
   } catch { /* página pública — sem sessão */ }
 
   /* ── 2. Parâmetros do tile ── */
-  const TILE_W   = 380;
-  const TILE_H   = 200;
+  const TILE_W    = 380;
+  const TILE_H    = userEmail ? 180 : 140;
   const ANGLE_DEG = -28;
 
   /* ── 3. Canvas do tile ── */
@@ -43,36 +39,35 @@
     ctx.translate(-TILE_W / 2, -TILE_H / 2);
 
     const cx = TILE_W / 2;
+    const cy = TILE_H / 2;
 
-    /* Logo */
+    /* ── Logo (mais forte, pois é branca sobre fundo claro) ── */
     if (logo.complete && logo.naturalWidth > 0) {
       const aspect = logo.naturalWidth / logo.naturalHeight;
-      const lh = 30;
+      const lh = 36;
       const lw = lh * aspect;
-      ctx.globalAlpha = 0.11;
-      ctx.drawImage(logo, cx - lw / 2, 44, lw, lh);
-    }
+      const logoY = userEmail ? cy - 26 : cy - 18;
 
-    /* Texto principal */
-    ctx.globalAlpha = 0.10;
-    ctx.fillStyle   = '#0E2E9B';
-    ctx.textAlign   = 'center';
-    ctx.textBaseline = 'top';
-
-    ctx.font = 'bold 11px "Manrope","Segoe UI",Arial,sans-serif';
-    ctx.fillText('USO INTERNO · EQUIPE PLANEJAMENTO', cx, 84);
-
-    /* E-mail do usuário (se autenticado) */
-    if (userEmail) {
-      ctx.font = '10px "Manrope","Segoe UI",Arial,sans-serif';
-      ctx.fillText(userEmail, cx, 100);
-    }
-
-    /* Nome do usuário (se disponível) */
-    if (userName) {
-      ctx.font = '10px "Manrope","Segoe UI",Arial,sans-serif';
+      /* Fundo escuro sutil atrás da logo branca para dar contraste */
       ctx.globalAlpha = 0.08;
-      ctx.fillText(userName, cx, 115);
+      ctx.fillStyle = '#0E2E9B';
+      ctx.beginPath();
+      ctx.roundRect(cx - lw / 2 - 8, logoY - 6, lw + 16, lh + 12, 6);
+      ctx.fill();
+
+      /* Logo em si */
+      ctx.globalAlpha = 0.22;
+      ctx.drawImage(logo, cx - lw / 2, logoY, lw, lh);
+    }
+
+    /* ── E-mail do usuário logado ── */
+    if (userEmail) {
+      ctx.globalAlpha = 0.18;
+      ctx.fillStyle   = '#0E2E9B';
+      ctx.textAlign   = 'center';
+      ctx.textBaseline = 'top';
+      ctx.font = '11px "Manrope","Segoe UI",Arial,sans-serif';
+      ctx.fillText(userEmail, cx, cy + 18);
     }
 
     ctx.restore();
