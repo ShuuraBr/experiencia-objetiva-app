@@ -93,7 +93,15 @@ document.querySelectorAll(".kpi-emoji-card.kpi-clickable").forEach((card) => {
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
-const state = { sectors: [], filterSectorId: "", filterStartDate: "", filterEndDate: "", charts: {}, questionsByScore: {} };
+const state = {
+  sectors: [],
+  filterSectorId: "",
+  filterStartDate: "",
+  filterEndDate: "",
+  charts: {},
+  chartRuntimeReady: false,
+  questionsByScore: {},
+};
 
 // ---------------------------------------------------------------------------
 // Boot
@@ -159,12 +167,17 @@ async function loadSectors() {
 async function refreshDashboard() {
   const q = buildQuery();
   if (exportButton) exportButton.href = `/api/dashboard/export.csv${q ? `?${q}` : ""}`;
-  const { dashboard } = await fetchJson(`/api/dashboard${q ? `?${q}` : ""}`);
-  renderKpis(dashboard.summary, dashboard.scoreDistribution);
-  renderCharts(dashboard);
-  renderEmployeeBreakdown(dashboard.breakdowns.topEmployees);
-  renderSignals(dashboard.lowScoreSignals);
-  renderComments(dashboard.comments);
+  try {
+    const { dashboard } = await fetchJson(`/api/dashboard${q ? `?${q}` : ""}`);
+    renderKpis(dashboard.summary, dashboard.scoreDistribution);
+    renderCharts(dashboard);
+    renderEmployeeBreakdown(dashboard.breakdowns.topEmployees);
+    renderSignals(dashboard.lowScoreSignals);
+    renderComments(dashboard.comments);
+  } catch (error) {
+    console.error("[dashboard] erro ao carregar:", error);
+    renderDashboardError(error);
+  }
 }
 
 function buildQuery() {
@@ -195,14 +208,29 @@ function renderKpis(summary, dist) {
   }
 }
 
+function renderDashboardError(error) {
+  if (metricTotal) metricTotal.textContent = "--";
+  if (metricAvg) metricAvg.textContent = "--";
+  if (metricLow) metricLow.textContent = "--%";
+  if (metricLowCount) metricLowCount.textContent = "Falha ao carregar";
+  if (metricHigh) metricHigh.textContent = "--%";
+  if (metricHighCount) metricHighCount.textContent = "Falha ao carregar";
+  if (metricSectors) metricSectors.textContent = String(state.sectors.length || "--");
+
+  renderChartErrorState(error?.message || "Nao foi possivel carregar os graficos.");
+  if (breakdownEmployees) breakdownEmployees.innerHTML = `<p class="empty-state">Nao foi possivel carregar os destaques agora.</p>`;
+  if (signalsList) signalsList.innerHTML = `<p class="empty-state">Nao foi possivel carregar os alertas agora.</p>`;
+  if (commentsList) commentsList.innerHTML = `<p class="empty-state" style="grid-column:1/-1;">Nao foi possivel carregar os comentarios agora.</p>`;
+}
+
 // ---------------------------------------------------------------------------
 // Charts
 // ---------------------------------------------------------------------------
 const CC = { accent:"#0E2E9B", success:"#00965e", grid:"rgba(14,46,155,0.08)", text:"rgba(0,9,40,0.6)" };
 const SC = ["#D63B2F","#E8A300","#8A93B4","#3BA35B","#00965e"];
+const chartCanvases = [trendCanvas, sectorCanvas, avgSectorCanvas, distCanvas].filter(Boolean);
 
-// Register chartAreaBackground plugin globally
-Chart.register({
+const chartAreaBackgroundPlugin = {
   id: "chartAreaBackground",
   beforeDraw(chart, _args, opts) {
     if (!opts?.color) return;
@@ -213,7 +241,54 @@ Chart.register({
     ctx.fillRect(chartArea.left, chartArea.top, chartArea.width, chartArea.height);
     ctx.restore();
   },
-});
+};
+
+function getChartFrame(canvas) {
+  return canvas?.closest(".chart-frame") || canvas?.parentElement || null;
+}
+
+function clearChartMessage(canvas) {
+  const frame = getChartFrame(canvas);
+  if (!frame) return;
+  frame.classList.remove("chart-frame-empty");
+  const message = frame.querySelector(".chart-empty-state");
+  if (message) message.remove();
+  if (canvas) canvas.hidden = false;
+}
+
+function showChartMessage(canvas, message) {
+  const frame = getChartFrame(canvas);
+  if (!frame) return;
+
+  let text = frame.querySelector(".chart-empty-state");
+  if (!text) {
+    text = document.createElement("p");
+    text.className = "chart-empty-state";
+    frame.appendChild(text);
+  }
+
+  text.textContent = message;
+  frame.classList.add("chart-frame-empty");
+  if (canvas) canvas.hidden = true;
+}
+
+function renderChartErrorState(message) {
+  chartCanvases.forEach((canvas) => {
+    destroyChart(canvas.id.replace("Canvas", ""));
+    showChartMessage(canvas, message);
+  });
+}
+
+function ensureChartRuntime() {
+  if (state.chartRuntimeReady) return true;
+  if (typeof window.Chart === "undefined") {
+    renderChartErrorState("A biblioteca de graficos nao carregou. Recarregue a pagina.");
+    return false;
+  }
+  window.Chart.register(chartAreaBackgroundPlugin);
+  state.chartRuntimeReady = true;
+  return true;
+}
 
 function destroyChart(key) {
   if (state.charts[key]) {
@@ -234,7 +309,10 @@ function destroyChart(key) {
     flexDirection: "column", gap: "16px",
     fontFamily: "Manrope, sans-serif",
     color: "rgba(255,255,255,0.9)",
-    pointerEvents: "none",
+    pointerEvents: "auto",
+    opacity: "0",
+    transition: "opacity 120ms ease",
+    backdropFilter: "blur(18px)",
   });
   overlay.innerHTML = `
     <div style="font-size:3rem;">🔒</div>
@@ -243,6 +321,7 @@ function destroyChart(key) {
       Este painel é de uso exclusivo interno.<br>A captura de tela não é permitida.
     </div>`;
   document.body.appendChild(overlay);
+  let hideTimer = 0;
 
 
   // 3) Intercept screenshot keys BEFORE the OS acts
@@ -260,18 +339,27 @@ function destroyChart(key) {
 
     // Win+Shift+S — Windows key is not exposed to JS, but browser DOES receive
     // Shift+S keydown first. We block it when the user is NOT typing in a field.
-    const tag = document.activeElement?.tagName?.toLowerCase();
-    const isEditable =
-      tag === "input" || tag === "textarea" ||
-      document.activeElement?.isContentEditable;
     const isWinShiftS =
-      e.shiftKey && (e.key === "s" || e.key === "S") && !isEditable;
+      e.code === "KeyS" && e.shiftKey && !e.ctrlKey && !e.altKey && !e.repeat;
 
     if (isPrintScreen || isMacCapture || isWinShiftS) {
       e.preventDefault();
+      e.stopPropagation();
       showCaptureBlock();
     }
   }, true); // capture phase = fires before any other handler
+
+  window.addEventListener("keyup", (e) => {
+    const shouldRelease =
+      e.key === "PrintScreen" ||
+      e.key === "Shift" ||
+      e.code === "KeyS" ||
+      e.code === "Digit3" ||
+      e.code === "Digit4";
+    if (shouldRelease && overlay.style.display === "flex" && !document.hidden) {
+      hideCaptureBlock();
+    }
+  }, true);
 
   // 4) Fallback: window loses focus when Snipping Tool / other capture tools open
   window.addEventListener("blur", showCaptureBlock);
@@ -286,15 +374,27 @@ function destroyChart(key) {
   document.addEventListener("contextmenu", (e) => e.preventDefault());
 
   function showCaptureBlock() {
+    clearTimeout(hideTimer);
     overlay.style.display = "flex";
+    overlay.style.opacity = "1";
+    document.body.classList.add("capture-guard-active");
+    hideTimer = window.setTimeout(releaseCaptureBlock, 1600);
   }
   function hideCaptureBlock() {
-    // Small delay so overlay is still visible in the captured frame if blur fires late
-    setTimeout(() => { overlay.style.display = "none"; }, 600);
+    // Browsers cannot reliably block OS-level screenshots, so we keep the overlay
+    // visible a bit longer to reduce the gap between the shortcut and the blur event.
+    clearTimeout(hideTimer);
+    hideTimer = window.setTimeout(releaseCaptureBlock, 900);
+  }
+  function releaseCaptureBlock() {
+    overlay.style.opacity = "0";
+    overlay.style.display = "none";
+    document.body.classList.remove("capture-guard-active");
   }
 })();
 
 function renderCharts(d) {
+  if (!ensureChartRuntime()) return;
   renderTrendChart(d.trend);
   renderSectorChart(d.breakdowns.bySector);
   renderAvgSectorChart(d.breakdowns.bySector);
@@ -302,8 +402,16 @@ function renderCharts(d) {
 }
 
 function renderTrendChart(trend) {
-  destroyChart("trend"); if (!trend.length || !trendCanvas) return;
-  state.charts.trend = new Chart(trendCanvas, {
+  destroyChart("trend");
+  if (!trendCanvas) return;
+  clearChartMessage(trendCanvas);
+  if (!trend.length) {
+    showChartMessage(trendCanvas, "A tendencia diaria aparecera assim que houver respostas no periodo selecionado.");
+    return;
+  }
+
+  try {
+    state.charts.trend = new window.Chart(trendCanvas, {
     type:"line",
     data:{ labels:trend.map((d)=>formatDay(d.day)), datasets:[
       { label:"Respostas", data:trend.map((d)=>d.responses), borderColor:CC.accent,
@@ -320,18 +428,29 @@ function renderTrendChart(trend) {
         yCount:{ type:"linear", position:"left", grid:{color:CC.grid}, ticks:{color:CC.text,font:{family:"Manrope"},stepSize:1} },
         yScore:{ type:"linear", position:"right", min:0, max:5, grid:{display:false}, ticks:{color:CC.success,font:{family:"Manrope"}} },
       }},
-  });
+    });
+  } catch (error) {
+    console.error("[chart] trend:", error);
+    showChartMessage(trendCanvas, "Nao foi possivel renderizar o grafico de tendencia.");
+  }
 }
 
 function renderSectorChart(bySector) {
-  destroyChart("sector"); if (!bySector.length || !sectorCanvas) return;
+  destroyChart("sector");
+  if (!sectorCanvas) return;
+  clearChartMessage(sectorCanvas);
+  if (!bySector.length) {
+    showChartMessage(sectorCanvas, "Os setores mais avaliados aparecerao depois das primeiras respostas.");
+    return;
+  }
   const s = [...bySector].sort((a,b)=>b.responses-a.responses).slice(0,10);
-  state.charts.sector = new Chart(sectorCanvas, {
+  try {
+    state.charts.sector = new window.Chart(sectorCanvas, {
     type:"bar",
     data:{ labels:s.map((r)=>r.label), datasets:[
       { label:"Respostas", data:s.map((r)=>r.responses),
         backgroundColor:s.map((_,i)=>`hsla(${225+i*14},62%,44%,0.82)`),
-        borderRadius:6, barThickness:22 },
+        borderRadius:12, borderSkipped:false, barThickness:22 },
     ]},
     options:{ responsive:true, maintainAspectRatio:false, indexAxis:"y",
       plugins:{ legend:{display:false},
@@ -339,38 +458,68 @@ function renderSectorChart(bySector) {
       scales:{
         x:{grid:{color:CC.grid},ticks:{color:CC.text,font:{family:"Manrope"}}},
         y:{grid:{display:false},ticks:{color:CC.text,font:{family:"Manrope",size:11}}} }},
-  });
+    });
+  } catch (error) {
+    console.error("[chart] sector:", error);
+    showChartMessage(sectorCanvas, "Nao foi possivel renderizar o grafico por setor.");
+  }
 }
 
 function renderAvgSectorChart(bySector) {
-  destroyChart("avgSector"); if (!bySector.length || !avgSectorCanvas) return;
+  destroyChart("avgSector");
+  if (!avgSectorCanvas) return;
+  clearChartMessage(avgSectorCanvas);
   const s = [...bySector].filter((r)=>r.average_score!==null)
     .sort((a,b)=>(b.average_score||0)-(a.average_score||0)).slice(0,10);
-  state.charts.avgSector = new Chart(avgSectorCanvas, {
+  if (!s.length) {
+    showChartMessage(avgSectorCanvas, "As medias por setor aparecerao quando houver respostas suficientes.");
+    return;
+  }
+
+  try {
+    state.charts.avgSector = new window.Chart(avgSectorCanvas, {
     type:"bar",
     data:{ labels:s.map((r)=>r.label), datasets:[{ label:"Média", data:s.map((r)=>r.average_score),
       backgroundColor:s.map((r)=>{const v=r.average_score||0;
         return v>=4?"rgba(0,150,94,0.85)":v>=3?"rgba(14,46,155,0.75)":v>=2?"rgba(232,163,0,0.85)":"rgba(214,59,47,0.85)";
-      }), borderRadius:6, barThickness:24 }] },
+      }), borderRadius:12, borderSkipped:false, barThickness:24 }] },
     options:{ responsive:true, maintainAspectRatio:false, indexAxis:"y",
       plugins:{legend:{display:false},
         tooltip:{ callbacks:{ label:(ctx)=>`  Média: ${ctx.raw}/5` } }},
       scales:{
         x:{min:0,max:5,grid:{color:CC.grid},ticks:{color:CC.text,font:{family:"Manrope"}}},
         y:{grid:{display:false},ticks:{color:CC.text,font:{family:"Manrope",size:11}}} }},
-  });
+    });
+  } catch (error) {
+    console.error("[chart] avgSector:", error);
+    showChartMessage(avgSectorCanvas, "Nao foi possivel renderizar o grafico de medias por setor.");
+  }
 }
 
 function renderDistChart(dist) {
-  destroyChart("dist"); if (!distCanvas) return;
-  state.charts.dist = new Chart(distCanvas, {
+  destroyChart("dist");
+  if (!distCanvas) return;
+  clearChartMessage(distCanvas);
+  const values = [dist.counts[1], dist.counts[2], dist.counts[3], dist.counts[4], dist.counts[5]];
+  const total = values.reduce((sum, value) => sum + Number(value || 0), 0);
+  if (!total) {
+    showChartMessage(distCanvas, "A distribuicao por nota aparecera assim que a primeira avaliacao for registrada.");
+    return;
+  }
+
+  try {
+    state.charts.dist = new window.Chart(distCanvas, {
     type:"doughnut",
     data:{ labels:["😡 Péssimo","😕 Ruim","😐 Neutro","🙂 Bom","😍 Excelente"],
-      datasets:[{ data:[dist.counts[1],dist.counts[2],dist.counts[3],dist.counts[4],dist.counts[5]],
-        backgroundColor:SC, borderWidth:2, borderColor:"#ffffff" }] },
+      datasets:[{ data:values,
+        backgroundColor:SC, borderWidth:2, borderColor:"#ffffff", borderRadius:10 }] },
     options:{ responsive:true, maintainAspectRatio:false,
       plugins:{ legend:{ position:"right", labels:{ color:CC.text,font:{family:"Manrope"},padding:14,boxWidth:14 } } } },
-  });
+    });
+  } catch (error) {
+    console.error("[chart] dist:", error);
+    showChartMessage(distCanvas, "Nao foi possivel renderizar a distribuicao por nota.");
+  }
 }
 
 // ---------------------------------------------------------------------------

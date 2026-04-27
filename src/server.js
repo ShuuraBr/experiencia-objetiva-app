@@ -21,6 +21,7 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = path.dirname(__filename);
 const publicDir  = path.resolve(__dirname, "../public");
+const vendorChartDir = path.resolve(__dirname, "../node_modules/chart.js/dist");
 const configuredBaseUrl = process.env.PUBLIC_BASE_URL?.trim().replace(/\/+$/, "");
 
 // Fallback env credentials (used only if no admin_users in DB)
@@ -35,6 +36,7 @@ app.set("trust proxy", true);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use("/vendor/chart.js", express.static(vendorChartDir));
 app.use(express.static(publicDir));
 
 function baseUrl(req) { return configuredBaseUrl || `${req.protocol}://${req.get("host")}`; }

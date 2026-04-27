@@ -309,6 +309,7 @@ async function initializeDatabase() {
     await adapter.init();
     await runSqliteMigrations();
     await seedSectorsAndQuestions();
+    await runSqlitePostSeedMigrations();
   } catch (error) {
     dbInitError = error;
     console.error("[db] initialization failed:", error);
@@ -363,6 +364,153 @@ async function runSqliteMigrations() {
     id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL,
     created_at TEXT NOT NULL, expires_at TEXT NOT NULL, used INTEGER NOT NULL DEFAULT 0
   )`);
+}
+
+function normalizeLegacyText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function clampLegacyScore(value, fallback = 3) {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric)) {
+    return Math.min(5, Math.max(1, Math.round(numeric)));
+  }
+  return Math.min(5, Math.max(1, Math.round(fallback)));
+}
+
+function inferLegacySectorSlug(pointRow) {
+  const haystack = normalizeLegacyText([
+    pointRow?.title,
+    pointRow?.responsible_area,
+    pointRow?.journey_stage,
+    pointRow?.channel,
+    pointRow?.description,
+    pointRow?.unit_name,
+  ].filter(Boolean).join(" "));
+
+  if (!haystack) return "comercial-vendas";
+  if (haystack.includes("caixa")) return "comercial-caixa";
+  if (haystack.includes("compra")) return "comercial-compras";
+  if (haystack.includes("balcao") || haystack.includes("interna")) return "expedicao-interna";
+  if (haystack.includes("patio") || haystack.includes("externa") || haystack.includes("park sul")) return "expedicao-externa";
+  if (haystack.includes("freteiro")) return "entrega-freteiro";
+  if (haystack.includes("entrega") || haystack.includes("motorista")) return "entrega-objetiva";
+  if (haystack.includes("finance")) return "admin-financeiro";
+  if (haystack.includes("recursos humanos") || /\brh\b/.test(haystack)) return "admin-rh";
+  if (haystack.includes("departamento pessoal") || /\bdp\b/.test(haystack)) return "admin-dp";
+  return "comercial-vendas";
+}
+
+async function runSqlitePostSeedMigrations() {
+  if (storageMode !== "sqlite") return;
+
+  const responseCols = await adapter.all(`PRAGMA table_info(responses)`);
+  const responseColNames = responseCols.map((c) => c.name);
+
+  if (!responseColNames.includes("sector_id") && responseColNames.includes("point_id")) {
+    await migrateLegacySqliteResponses();
+    return;
+  }
+
+  if (responseColNames.includes("sector_id") && !responseColNames.includes("employee_id")) {
+    await adapter.run(`ALTER TABLE responses ADD COLUMN employee_id INTEGER REFERENCES employees(id) ON DELETE SET NULL`);
+  }
+
+  if (responseColNames.includes("sector_id") && !responseColNames.includes("customer_contact")) {
+    await adapter.run(`ALTER TABLE responses ADD COLUMN customer_contact TEXT`);
+  }
+}
+
+async function migrateLegacySqliteResponses() {
+  const legacyRows = await adapter.all(
+    `SELECT r.*, cp.title, cp.unit_name, cp.journey_stage, cp.channel, cp.responsible_area, cp.description
+      FROM responses r
+      LEFT JOIN collection_points cp ON cp.id = r.point_id
+      ORDER BY r.id ASC`,
+  );
+
+  const sectors = await adapter.all(`SELECT id, slug FROM sectors ORDER BY id ASC`);
+  const sectorIdBySlug = new Map(sectors.map((sector) => [sector.slug, Number(sector.id)]));
+  const fallbackSectorId = Number(sectors[0]?.id || 0);
+  if (!fallbackSectorId) {
+    throw new Error("Nenhum setor foi encontrado para migrar o banco SQLite legado.");
+  }
+
+  const questionRows = await adapter.all(
+    `SELECT id, sector_id, position FROM sector_questions ORDER BY sector_id ASC, position ASC`,
+  );
+  const questionsBySectorId = new Map();
+  for (const row of questionRows) {
+    const sectorId = Number(row.sector_id);
+    if (!questionsBySectorId.has(sectorId)) questionsBySectorId.set(sectorId, []);
+    questionsBySectorId.get(sectorId).push({ id: Number(row.id), position: Number(row.position) });
+  }
+
+  const backupTableName = "responses_legacy_backup";
+
+  try {
+    await adapter.run(`BEGIN IMMEDIATE`);
+    await adapter.run(`ALTER TABLE responses RENAME TO ${backupTableName}`);
+    await adapter.run(`DROP TABLE IF EXISTS response_answers`);
+    await adapter.run(`CREATE TABLE responses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sector_id INTEGER NOT NULL REFERENCES sectors(id) ON DELETE RESTRICT,
+      employee_id INTEGER REFERENCES employees(id) ON DELETE SET NULL,
+      customer_name TEXT NOT NULL,
+      customer_contact TEXT,
+      comment TEXT,
+      overall_score REAL,
+      created_at TEXT NOT NULL
+    )`);
+    await adapter.run(`CREATE TABLE response_answers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      response_id INTEGER NOT NULL REFERENCES responses(id) ON DELETE CASCADE,
+      question_id INTEGER NOT NULL REFERENCES sector_questions(id) ON DELETE CASCADE,
+      score INTEGER NOT NULL CHECK (score BETWEEN 1 AND 5)
+    )`);
+
+    for (const row of legacyRows) {
+      const inferredSlug = inferLegacySectorSlug(row);
+      const sectorId = sectorIdBySlug.get(inferredSlug) || fallbackSectorId;
+      const questionSet = questionsBySectorId.get(sectorId) || [];
+      const fallbackScore = clampLegacyScore(row.overall_score, 3);
+      const answers = [
+        clampLegacyScore(row.service_quality, fallbackScore),
+        clampLegacyScore(row.guidance_clarity, fallbackScore),
+        clampLegacyScore(row.solution_fit, fallbackScore),
+        clampLegacyScore(row.operational_efficiency, fallbackScore),
+        clampLegacyScore(row.delivery_rating, fallbackScore),
+      ];
+
+      const responseResult = await adapter.run(
+        `INSERT INTO responses (sector_id, employee_id, customer_name, customer_contact, comment, overall_score, created_at)
+         VALUES (?, NULL, ?, NULL, ?, ?, ?)`,
+        [
+          sectorId,
+          row.customer_name || "Cliente nao identificado",
+          row.comment ?? null,
+          Number(row.overall_score ?? fallbackScore),
+          row.created_at,
+        ],
+      );
+
+      for (let index = 0; index < questionSet.length; index++) {
+        const question = questionSet[index];
+        await adapter.run(
+          `INSERT INTO response_answers (response_id, question_id, score) VALUES (?, ?, ?)`,
+          [responseResult.lastInsertId, question.id, answers[index] ?? fallbackScore],
+        );
+      }
+    }
+
+    await adapter.run(`COMMIT`);
+  } catch (error) {
+    await adapter.run(`ROLLBACK`).catch(() => {});
+    throw error;
+  }
 }
 
 function getMySqlConfig() {

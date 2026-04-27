@@ -236,10 +236,9 @@ button, input, select, textarea { font: inherit; }
 
 .dashboard-sidebar, .dashboard-main { border-radius: 32px; }
 .dashboard-main {
-  /* Same bg as workspace-panels so grid gaps are seamless */
-  background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(242,245,255,0.82));
-  border: 1px solid rgba(255,255,255,0.4);
-  box-shadow: var(--shadow);
+  background: transparent;
+  border: none;
+  box-shadow: none;
 }
 
 .dashboard-sidebar {
@@ -301,7 +300,7 @@ button, input, select, textarea { font: inherit; }
 
 .sidebar-section { margin-top: auto; padding-top: 28px; }
 
-.dashboard-main { padding: 22px 20px 28px; overflow: hidden; }
+.dashboard-main { padding: 22px 8px 28px; overflow: visible; }
 
 .topbar {
   padding: 18px 22px;
@@ -341,13 +340,53 @@ button, input, select, textarea { font: inherit; }
 
 /* ── Dashboard Grid ── */
 
-.workspace-panel { border-radius: 20px; padding: 24px; overflow: hidden; }
-.workspace-panel canvas { background: transparent !important; display: block; }
-.workspace-panel > div[style*="position:relative"],
-.workspace-panel > div[style*="position: relative"] {
-  border-radius: inherit;
-  background: transparent;
+.workspace-panel {
+  border-radius: 26px;
+  padding: 24px;
   overflow: hidden;
+  border: 1px solid rgba(14, 46, 155, 0.12);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 248, 255, 0.88));
+  box-shadow: 0 18px 38px rgba(0, 9, 40, 0.08);
+  isolation: isolate;
+}
+
+.workspace-panel canvas {
+  background: transparent !important;
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.chart-frame {
+  position: relative;
+  min-height: var(--chart-height, 220px);
+  height: var(--chart-height, 220px);
+  padding: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.chart-frame-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-empty-state {
+  margin: 0;
+  max-width: 32ch;
+  text-align: center;
+  color: var(--text-soft);
+  line-height: 1.6;
+}
+
+.capture-guard-active .dashboard-shell {
+  filter: blur(16px) saturate(0.35);
+  transform: scale(1.01);
+  transition: filter 120ms ease, transform 120ms ease;
 }
 
 .panel-heading {
