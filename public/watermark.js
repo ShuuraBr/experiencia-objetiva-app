@@ -27,7 +27,7 @@
 
   /* ── 4. Carregar logo ── */
   const logo = new Image();
-  logo.src = '/assets/Logotipo-cores-institucionais-vetorizada-removebg-preview.png';
+  logo.src = '/assets/favicon.png';
 
   function renderTile() {
     ctx.clearRect(0, 0, TILE_W, TILE_H);
