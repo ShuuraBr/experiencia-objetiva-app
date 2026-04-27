@@ -49,13 +49,13 @@
       const logoY = userEmail ? cy - 26 : cy - 18;
 
       /* Logo em si */
-      ctx.globalAlpha = 0.22;
+      ctx.globalAlpha = 0.15;
       ctx.drawImage(logo, cx - lw / 2, logoY, lw, lh);
     }
 
     /* ── E-mail do usuário logado ── */
     if (userEmail) {
-      ctx.globalAlpha = 0.18;
+      ctx.globalAlpha = 0.15;
       ctx.fillStyle   = '#0E2E9B';
       ctx.textAlign   = 'center';
       ctx.textBaseline = 'top';
