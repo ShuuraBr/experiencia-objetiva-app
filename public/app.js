@@ -4,7 +4,6 @@ const metricAverage = document.querySelector("#metricAverage");
 const metricSectors = document.querySelector("#metricSectors");
 
 boot();
-setupAggressiveCaptureGuard(); // Inicia a proteção anti-captura
 
 async function boot() {
   try {
@@ -71,20 +70,34 @@ async function fetchJson(url, options = {}) {
   return response.json();
 }
 
-// --- Funcionalidade Anti-Captura de Ecrã ---
+// --- Funcionalidade Anti-Captura de Ecrã (Ultra Rápida) ---
 function setupAggressiveCaptureGuard() {
     const body = document.body;
+    
+    // 1. Cria a tela de bloqueio dinamicamente
+    const overlay = document.createElement('div');
+    overlay.id = 'security-overlay';
+    overlay.innerHTML = '<div style="text-align: center;"><div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div><h2>Proteção de Ecrã Ativa</h2><p>A captura de dados é restrita por motivos de segurança.</p></div>';
+    body.appendChild(overlay);
 
-    // 1. AÇÃO ANTECIPATIVA: Bloqueia assim que as teclas de atalho (Win+Shift ou PrintScreen) começam a ser premidas
+    // Dicionário para rastrear as teclas pressionadas em tempo real
+    let keysPressed = {};
+
     window.addEventListener('keydown', (e) => {
-        if ((e.metaKey && e.shiftKey) || e.key === 'PrintScreen' || e.key === 'F12') {
+        keysPressed[e.key] = true;
+        
+        // Se a tecla Meta (Windows) E a tecla Shift estiverem pressionadas em simultâneo
+        // OU se premir PrintScreen / F12
+        if ((keysPressed['Meta'] && keysPressed['Shift']) || (keysPressed['OS'] && keysPressed['Shift']) || e.key === 'PrintScreen' || e.key === 'F12') {
             body.classList.add('capture-guard-active');
         }
     });
 
-    // 2. RECUPERAÇÃO: Se o utilizador soltar as teclas sem pressionar o 'S'
     window.addEventListener('keyup', (e) => {
-        if (e.key === 'Meta' || e.key === 'Shift') {
+        keysPressed[e.key] = false;
+        
+        // Só remove se já não estiver a carregar no Windows nem no Shift
+        if (!keysPressed['Meta'] && !keysPressed['OS'] && !keysPressed['Shift']) {
             setTimeout(() => {
                 if (document.hasFocus()) {
                     body.classList.remove('capture-guard-active');
@@ -93,18 +106,22 @@ function setupAggressiveCaptureGuard() {
         }
     });
 
-    // 3. PERDA DE FOCO: Se a ferramenta de recorte roubar o foco ou houver um Alt+Tab
+    // Perda de foco (quando o recorte do Windows assume o controlo do rato/ecrã)
     window.addEventListener('blur', () => {
+        keysPressed = {}; // Limpa o estado das teclas por segurança
         body.classList.add('capture-guard-active');
     });
 
-    // 4. RESTAURAÇÃO: Quando o utilizador clica de volta na página
+    // Quando o utilizador clica de volta na página
     window.addEventListener('focus', () => {
         setTimeout(() => {
             body.classList.remove('capture-guard-active');
         }, 200);
     });
     
-    // Bloqueia clique direito (evita a inspeção fácil ou tentativa de copiar texto)
+    // Bloqueia clique direito
     document.addEventListener('contextmenu', e => e.preventDefault());
 }
+
+// Inicializa a proteção assim que o DOM carregar
+document.addEventListener('DOMContentLoaded', setupAggressiveCaptureGuard);

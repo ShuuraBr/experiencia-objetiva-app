@@ -36,7 +36,7 @@ body {
     radial-gradient(circle at top right, rgba(0, 150, 94, 0.16), transparent 22%),
     radial-gradient(circle at bottom left, rgba(0, 9, 40, 0.1), transparent 28%),
     var(--bg);
-    
+
   /* Bloqueia seleção e arrasto de elementos por segurança */
   -webkit-user-select: none;
   -ms-user-select: none;
@@ -67,7 +67,6 @@ button, input, select, textarea { font: inherit; }
   width: min(1280px, calc(100vw - 32px));
   margin: 0 auto;
   padding: 24px 0 48px;
-  transition: filter 300ms ease, transform 300ms ease;
 }
 
 .site-header, .topbar, .survey-hero {
@@ -239,7 +238,6 @@ button, input, select, textarea { font: inherit; }
   min-height: 100vh;
   margin: 0 auto;
   padding: 18px 0 28px;
-  transition: filter 300ms ease, transform 300ms ease;
 }
 
 .dashboard-sidebar, .dashboard-main { border-radius: 32px; }
@@ -384,15 +382,47 @@ button, input, select, textarea { font: inherit; }
   line-height: 1.6;
 }
 
-/* ── REGRA DE BLOQUEIO ATUALIZADA (SEM ATRASO) ── */
+/* ═══════════════════════════════════════════════════════════
+   REGRA DE BLOQUEIO ULTRA RÁPIDA (OPACITY ZERO)
+   ═══════════════════════════════════════════════════════════ */
+
+#security-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--accent-strong);
+  color: white;
+  z-index: 9999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  /* Transição suave APENAS para desaparecer. A entrada é a 0ms */
+  transition: opacity 300ms ease, visibility 300ms ease;
+}
+
+.capture-guard-active #security-overlay {
+  opacity: 1;
+  visibility: visible;
+  transition: none !important; /* Entrada instantânea */
+}
+
 .capture-guard-active .dashboard-shell,
 .capture-guard-active .login-shell,
 .capture-guard-active .survey-shell,
 .capture-guard-active .hero-shell {
-  filter: blur(28px) saturate(0.1);
-  transform: scale(1.01);
-  transition: none !important; /* CRUCIAL: Elimina o atraso para o desfoque entrar instantaneamente */
+  opacity: 0; 
+  pointer-events: none;
+  transition: none !important; /* Desaparece instantaneamente */
 }
+
+/* Retorno ao normal para as áreas principais */
+.dashboard-shell, .login-shell, .survey-shell, .hero-shell {
+  transition: opacity 300ms ease;
+}
+
+/* ═══════════════════════════════════════════════════════════ */
 
 .panel-heading {
   display: flex;
@@ -627,7 +657,6 @@ textarea { resize: vertical; }
   border-radius: 40px;
   overflow: hidden;
   box-shadow: 0 40px 80px rgba(0, 9, 40, 0.28);
-  transition: filter 300ms ease, transform 300ms ease;
 }
 
 .login-brand {
