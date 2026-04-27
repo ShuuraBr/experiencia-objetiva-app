@@ -36,6 +36,12 @@ body {
     radial-gradient(circle at top right, rgba(0, 150, 94, 0.16), transparent 22%),
     radial-gradient(circle at bottom left, rgba(0, 9, 40, 0.1), transparent 28%),
     var(--bg);
+    
+  /* Bloqueia seleção e arrasto de elementos por segurança */
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 body::before {
@@ -61,6 +67,7 @@ button, input, select, textarea { font: inherit; }
   width: min(1280px, calc(100vw - 32px));
   margin: 0 auto;
   padding: 24px 0 48px;
+  transition: filter 300ms ease, transform 300ms ease;
 }
 
 .site-header, .topbar, .survey-hero {
@@ -232,6 +239,7 @@ button, input, select, textarea { font: inherit; }
   min-height: 100vh;
   margin: 0 auto;
   padding: 18px 0 28px;
+  transition: filter 300ms ease, transform 300ms ease;
 }
 
 .dashboard-sidebar, .dashboard-main { border-radius: 32px; }
@@ -376,10 +384,14 @@ button, input, select, textarea { font: inherit; }
   line-height: 1.6;
 }
 
-.capture-guard-active .dashboard-shell {
-  filter: blur(16px) saturate(0.35);
+/* ── REGRA DE BLOQUEIO ATUALIZADA (SEM ATRASO) ── */
+.capture-guard-active .dashboard-shell,
+.capture-guard-active .login-shell,
+.capture-guard-active .survey-shell,
+.capture-guard-active .hero-shell {
+  filter: blur(28px) saturate(0.1);
   transform: scale(1.01);
-  transition: filter 120ms ease, transform 120ms ease;
+  transition: none !important; /* CRUCIAL: Elimina o atraso para o desfoque entrar instantaneamente */
 }
 
 .panel-heading {
@@ -615,6 +627,7 @@ textarea { resize: vertical; }
   border-radius: 40px;
   overflow: hidden;
   box-shadow: 0 40px 80px rgba(0, 9, 40, 0.28);
+  transition: filter 300ms ease, transform 300ms ease;
 }
 
 .login-brand {

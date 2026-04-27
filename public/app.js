@@ -4,6 +4,7 @@ const metricAverage = document.querySelector("#metricAverage");
 const metricSectors = document.querySelector("#metricSectors");
 
 boot();
+setupAggressiveCaptureGuard(); // Inicia a proteção anti-captura
 
 async function boot() {
   try {
@@ -68,4 +69,42 @@ async function fetchJson(url, options = {}) {
     throw new Error("Falha na requisição.");
   }
   return response.json();
+}
+
+// --- Funcionalidade Anti-Captura de Ecrã ---
+function setupAggressiveCaptureGuard() {
+    const body = document.body;
+
+    // 1. AÇÃO ANTECIPATIVA: Bloqueia assim que as teclas de atalho (Win+Shift ou PrintScreen) começam a ser premidas
+    window.addEventListener('keydown', (e) => {
+        if ((e.metaKey && e.shiftKey) || e.key === 'PrintScreen' || e.key === 'F12') {
+            body.classList.add('capture-guard-active');
+        }
+    });
+
+    // 2. RECUPERAÇÃO: Se o utilizador soltar as teclas sem pressionar o 'S'
+    window.addEventListener('keyup', (e) => {
+        if (e.key === 'Meta' || e.key === 'Shift') {
+            setTimeout(() => {
+                if (document.hasFocus()) {
+                    body.classList.remove('capture-guard-active');
+                }
+            }, 300);
+        }
+    });
+
+    // 3. PERDA DE FOCO: Se a ferramenta de recorte roubar o foco ou houver um Alt+Tab
+    window.addEventListener('blur', () => {
+        body.classList.add('capture-guard-active');
+    });
+
+    // 4. RESTAURAÇÃO: Quando o utilizador clica de volta na página
+    window.addEventListener('focus', () => {
+        setTimeout(() => {
+            body.classList.remove('capture-guard-active');
+        }, 200);
+    });
+    
+    // Bloqueia clique direito (evita a inspeção fácil ou tentativa de copiar texto)
+    document.addEventListener('contextmenu', e => e.preventDefault());
 }
