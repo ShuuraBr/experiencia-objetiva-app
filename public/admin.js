@@ -255,7 +255,7 @@ const barDataLabelsPlugin = {
   },
 };
 
-// Custom plugin: draw percentage labels on doughnut slices
+// Custom plugin: draw percentage + count labels on doughnut slices
 const doughnutDataLabelsPlugin = {
   id: "doughnutDataLabels",
   afterDatasetsDraw(chart) {
@@ -274,13 +274,17 @@ const doughnutDataLabelsPlugin = {
       const lx = arc.x + Math.cos(midAngle) * midRadius;
       const ly = arc.y + Math.sin(midAngle) * midRadius;
       ctx.save();
-      ctx.fillStyle = "#fff";
-      ctx.font = "bold 12px Manrope, sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.shadowColor = "rgba(0,0,0,0.25)";
-      ctx.shadowBlur = 3;
-      ctx.fillText(`${pct}%`, lx, ly);
+      ctx.shadowColor = "rgba(0,0,0,0.3)";
+      ctx.shadowBlur = 4;
+      // Percentage line
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 12px Manrope, sans-serif";
+      ctx.fillText(`${pct}%`, lx, ly - 7);
+      // Count line
+      ctx.font = "600 10px Manrope, sans-serif";
+      ctx.fillText(`(${value})`, lx, ly + 7);
       ctx.restore();
     });
   },
