@@ -215,6 +215,7 @@ const sqliteSchema = `
     password_hash TEXT NOT NULL,
     name TEXT NOT NULL DEFAULT '',
     active INTEGER NOT NULL DEFAULT 1,
+    must_change_password INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
@@ -293,6 +294,16 @@ const mysqlSchemaStatements = [
     expires_at VARCHAR(30) NOT NULL,
     used TINYINT(1) NOT NULL DEFAULT 0
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS admin_users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL DEFAULT '',
+    active TINYINT(1) NOT NULL DEFAULT 1,
+    must_change_password TINYINT(1) NOT NULL DEFAULT 0,
+    created_at VARCHAR(30) NOT NULL,
+    updated_at VARCHAR(30) NOT NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 ];
 
 // ---------------------------------------------------------------------------
@@ -364,6 +375,21 @@ async function runSqliteMigrations() {
     id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL,
     created_at TEXT NOT NULL, expires_at TEXT NOT NULL, used INTEGER NOT NULL DEFAULT 0
   )`);
+  await adapter.run(`CREATE TABLE IF NOT EXISTS admin_users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    name TEXT NOT NULL DEFAULT '',
+    active INTEGER NOT NULL DEFAULT 1,
+    must_change_password INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`);
+  const adminCols = await adapter.all(`PRAGMA table_info(admin_users)`);
+  const adminColNames = adminCols.map((c) => c.name);
+  if (!adminColNames.includes("must_change_password")) {
+    await adapter.run(`ALTER TABLE admin_users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0`);
+  }
 }
 
 function normalizeLegacyText(value) {
@@ -552,6 +578,28 @@ async function runMysqlMigrations(pool) {
   );
   if (cc.length === 0) {
     await pool.query(`ALTER TABLE responses ADD COLUMN customer_contact VARCHAR(255) NULL AFTER customer_name`);
+  }
+  const [adminTables] = await pool.query(
+    `SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'admin_users'`
+  );
+  if (adminTables.length === 0) {
+    await pool.query(`CREATE TABLE IF NOT EXISTS admin_users (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      email VARCHAR(255) NOT NULL UNIQUE,
+      password_hash VARCHAR(255) NOT NULL,
+      name VARCHAR(255) NOT NULL DEFAULT '',
+      active TINYINT(1) NOT NULL DEFAULT 1,
+      must_change_password TINYINT(1) NOT NULL DEFAULT 0,
+      created_at VARCHAR(30) NOT NULL,
+      updated_at VARCHAR(30) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+  } else {
+    const [mcp] = await pool.query(
+      `SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'admin_users' AND COLUMN_NAME = 'must_change_password'`
+    );
+    if (mcp.length === 0) {
+      await pool.query(`ALTER TABLE admin_users ADD COLUMN must_change_password TINYINT(1) NOT NULL DEFAULT 0`);
+    }
   }
 }
 
@@ -1062,7 +1110,7 @@ export async function createAdminUser(payload) {
   if (exists) throw new Error("Este e-mail já está cadastrado.");
   const now = nowIso();
   const result = await db.run(
-    `INSERT INTO admin_users (email, password_hash, name, active, created_at, updated_at) VALUES (?,?,?,1,?,?)`,
+    `INSERT INTO admin_users (email, password_hash, name, active, must_change_password, created_at, updated_at) VALUES (?,?,?,1,1,?,?)`,
     [email, hashPassword(password), name, now, now]
   );
   return { id: result.lastInsertId, email, name };
@@ -1077,6 +1125,14 @@ export async function updateAdminUserPassword(id, newPassword) {
   );
 }
 
+export async function clearMustChangePassword(id) {
+  const db = await ensureAdapter();
+  await db.run(
+    `UPDATE admin_users SET must_change_password = 0, updated_at = ? WHERE id = ?`,
+    [nowIso(), Number(id)]
+  );
+}
+
 export async function deactivateAdminUser(id) {
   const db = await ensureAdapter();
   await db.run(`UPDATE admin_users SET active = 0, updated_at = ? WHERE id = ?`, [nowIso(), Number(id)]);
@@ -1085,10 +1141,10 @@ export async function deactivateAdminUser(id) {
 export async function validateAdminCredentials(email, password) {
   const db = await ensureAdapter();
   const row = await db.get(
-    `SELECT id, email, name FROM admin_users WHERE email = ? AND password_hash = ? AND active = 1`,
+    `SELECT id, email, name, must_change_password FROM admin_users WHERE email = ? AND password_hash = ? AND active = 1`,
     [email.toLowerCase(), hashPassword(password)]
   );
-  return row ? { id: Number(row.id), email: row.email, name: row.name } : null;
+  return row ? { id: Number(row.id), email: row.email, name: row.name, must_change_password: Number(row.must_change_password ?? 0) } : null;
 }
 
 export async function getAdminUserByEmail(email) {
