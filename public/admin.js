@@ -199,11 +199,12 @@ function renderKpis(summary, dist) {
   for (let i = 1; i <= 5; i++) {
     const el   = document.querySelector(`#count${i}`);
     const card = document.querySelector(`#kpi${i}`);
-    if (el)   el.textContent = dist.counts[i] || 0;
+    if (el) {
+      el.textContent = dist.counts[i] || 0;
+      el.style.color = SC[i - 1];
+    }
     if (card) {
       card.classList.remove("kpi-active-low", "kpi-active-high");
-      if (i <= 2 && dist.counts[i] > 0) card.classList.add("kpi-active-low");
-      if (i >= 4 && dist.counts[i] > 0) card.classList.add("kpi-active-high");
     }
   }
 }
@@ -229,6 +230,61 @@ function renderDashboardError(error) {
 const CC = { accent:"#0E2E9B", success:"#00965e", grid:"rgba(14,46,155,0.08)", text:"rgba(0,9,40,0.6)" };
 const SC = ["#D63B2F","#E8A300","#8A93B4","#3BA35B","#00965e"];
 const chartCanvases = [trendCanvas, sectorCanvas, avgSectorCanvas, distCanvas].filter(Boolean);
+
+// Custom plugin: draw value labels at the end of horizontal bars
+const barDataLabelsPlugin = {
+  id: "barDataLabels",
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    chart.data.datasets.forEach((dataset, i) => {
+      const meta = chart.getDatasetMeta(i);
+      if (!meta.visible) return;
+      const formatter = dataset.labelFormatter || ((v) => String(v));
+      meta.data.forEach((bar, idx) => {
+        const value = dataset.data[idx];
+        if (value == null) return;
+        ctx.save();
+        ctx.fillStyle = "rgba(0,9,40,0.72)";
+        ctx.font = "600 11px Manrope, sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(formatter(value), bar.x + 6, bar.y);
+        ctx.restore();
+      });
+    });
+  },
+};
+
+// Custom plugin: draw percentage labels on doughnut slices
+const doughnutDataLabelsPlugin = {
+  id: "doughnutDataLabels",
+  afterDatasetsDraw(chart) {
+    const { ctx, data } = chart;
+    const meta = chart.getDatasetMeta(0);
+    if (!meta?.data?.length) return;
+    const total = (data.datasets[0]?.data || []).reduce((s, v) => s + Number(v || 0), 0);
+    if (!total) return;
+    meta.data.forEach((arc, i) => {
+      const value = data.datasets[0].data[i];
+      if (!value) return;
+      const pct = Math.round((value / total) * 100);
+      if (pct < 4) return;
+      const midAngle = (arc.startAngle + arc.endAngle) / 2;
+      const midRadius = (arc.outerRadius + arc.innerRadius) / 2;
+      const lx = arc.x + Math.cos(midAngle) * midRadius;
+      const ly = arc.y + Math.sin(midAngle) * midRadius;
+      ctx.save();
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 12px Manrope, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.shadowColor = "rgba(0,0,0,0.25)";
+      ctx.shadowBlur = 3;
+      ctx.fillText(`${pct}%`, lx, ly);
+      ctx.restore();
+    });
+  },
+};
 
 const chartAreaBackgroundPlugin = {
   id: "chartAreaBackground",
@@ -286,6 +342,8 @@ function ensureChartRuntime() {
     return false;
   }
   window.Chart.register(chartAreaBackgroundPlugin);
+  window.Chart.register(barDataLabelsPlugin);
+  window.Chart.register(doughnutDataLabelsPlugin);
   state.chartRuntimeReady = true;
   return true;
 }
@@ -453,8 +511,7 @@ function renderSectorChart(bySector) {
         borderRadius:12, borderSkipped:false, barThickness:22 },
     ]},
     options:{ responsive:true, maintainAspectRatio:false, indexAxis:"y",
-      plugins:{ legend:{display:false},
-        tooltip:{ callbacks:{ label:(ctx)=>`  ${ctx.raw} resposta(s)` } }},
+      plugins:{ legend:{display:false}, tooltip:{enabled:false} },
       scales:{
         x:{grid:{color:CC.grid},ticks:{color:CC.text,font:{family:"Manrope"}}},
         y:{grid:{display:false},ticks:{color:CC.text,font:{family:"Manrope",size:11}}} }},
@@ -480,12 +537,12 @@ function renderAvgSectorChart(bySector) {
     state.charts.avgSector = new window.Chart(avgSectorCanvas, {
     type:"bar",
     data:{ labels:s.map((r)=>r.label), datasets:[{ label:"Média", data:s.map((r)=>r.average_score),
+      labelFormatter:(v)=>`${v}/5`,
       backgroundColor:s.map((r)=>{const v=r.average_score||0;
         return v>=4?"rgba(0,150,94,0.85)":v>=3?"rgba(14,46,155,0.75)":v>=2?"rgba(232,163,0,0.85)":"rgba(214,59,47,0.85)";
       }), borderRadius:12, borderSkipped:false, barThickness:24 }] },
     options:{ responsive:true, maintainAspectRatio:false, indexAxis:"y",
-      plugins:{legend:{display:false},
-        tooltip:{ callbacks:{ label:(ctx)=>`  Média: ${ctx.raw}/5` } }},
+      plugins:{legend:{display:false}, tooltip:{enabled:false}},
       scales:{
         x:{min:0,max:5,grid:{color:CC.grid},ticks:{color:CC.text,font:{family:"Manrope"}}},
         y:{grid:{display:false},ticks:{color:CC.text,font:{family:"Manrope",size:11}}} }},
@@ -514,7 +571,7 @@ function renderDistChart(dist) {
       datasets:[{ data:values,
         backgroundColor:SC, borderWidth:2, borderColor:"#ffffff", borderRadius:10 }] },
     options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ position:"right", labels:{ color:CC.text,font:{family:"Manrope"},padding:14,boxWidth:14 } } } },
+      plugins:{ legend:{ position:"right", labels:{ color:CC.text,font:{family:"Manrope"},padding:14,boxWidth:14 } }, tooltip:{enabled:false} } },
     });
   } catch (error) {
     console.error("[chart] dist:", error);

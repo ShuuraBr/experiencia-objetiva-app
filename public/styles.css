@@ -333,8 +333,8 @@ button, input, select, textarea { font: inherit; }
   box-shadow: 0 20px 40px rgba(14, 46, 155, 0.14);
 }
 
-.kpi-active-low  { border-color: var(--danger)  !important; background: rgba(214, 59, 47, 0.06); }
-.kpi-active-high { border-color: var(--success) !important; background: rgba(0, 150, 94, 0.06); }
+.kpi-active-low  { }
+.kpi-active-high { }
 
 /* ── Dashboard Grid (Painéis com Borda Arredondada Corrigida) ── */
 
@@ -1078,17 +1078,11 @@ textarea { resize: vertical; }
 }
 
 /* Active states — nível baixo */
-.kpi-active-low {
-  border-color: var(--danger) !important;
-  background: rgba(214, 59, 47, 0.05);
-}
+.kpi-active-low { }
 .kpi-active-low .kpi-value { color: var(--danger); }
 
 /* Active states — nível alto */
-.kpi-active-high {
-  border-color: var(--success) !important;
-  background: rgba(0, 150, 94, 0.05);
-}
+.kpi-active-high { }
 .kpi-active-high .kpi-value { color: var(--success); }
 
 /* Responsive */
