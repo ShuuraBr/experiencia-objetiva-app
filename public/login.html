@@ -44,6 +44,30 @@
           </div>
         </div>
 
+        <!-- Step 3: Change Initial Password -->
+        <div id="step3" hidden>
+          <div class="change-pw-icon">🔐</div>
+          <p class="eyebrow">Primeiro acesso</p>
+          <h2 class="login-card-title">Crie sua senha</h2>
+          <p class="login-card-desc">Por segurança, defina uma senha pessoal para substituir a senha temporária fornecida pelo administrador.</p>
+
+          <div class="login-form-group">
+            <label>
+              <span>Nova senha</span>
+              <input type="password" id="newPasswordInput" placeholder="••••••••" autocomplete="new-password" />
+            </label>
+            <label>
+              <span>Confirmar nova senha</span>
+              <input type="password" id="confirmPasswordInput" placeholder="••••••••" autocomplete="new-password" />
+            </label>
+            <p class="pw-hint">Mínimo de 6 caracteres.</p>
+            <button class="primary-button login-btn" id="changePwBtn" type="button">
+              <span id="changePwBtnText">Salvar e entrar</span>
+            </button>
+            <p class="login-feedback" id="changePwFeedback"></p>
+          </div>
+        </div>
+
         <!-- Step 2: 2FA Code -->
         <div id="step2" hidden>
           <p class="eyebrow">Passo 2 de 2</p>

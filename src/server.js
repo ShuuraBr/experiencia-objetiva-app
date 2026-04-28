@@ -16,6 +16,7 @@ import {
   // Admin users
   listAdminUsers, createAdminUser, updateAdminUserPassword,
   deactivateAdminUser, validateAdminCredentials, getAdminUserByEmail,
+  clearMustChangePassword,
 } from "./db.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -159,7 +160,7 @@ app.post("/api/auth/login", async (req, res) => {
   if (!user) return res.status(401).json({ error: "E-mail ou senha incorretos." });
   try {
     const code = await createTfaCode();
-    pendingUsers.set(String(code).trim(), { email: user.email, name: user.name || "" });
+    pendingUsers.set(String(code).trim(), { email: user.email, name: user.name || "", id: user.id || 0, must_change_password: user.must_change_password || 0 });
     const emailSent = await sendTfaEmail(user.email, code);
     res.json({ ok:true, emailSent,
       message: emailSent ? `Código enviado para ${user.email}.` : `Código gerado — verifique o terminal.` });
@@ -172,14 +173,14 @@ app.post("/api/auth/verify-2fa", async (req, res) => {
   const codeStr = String(code).trim();
   const valid = await validateTfaCode(codeStr);
   if (!valid) return res.status(401).json({ error: "Código inválido ou expirado." });
-  const pending = pendingUsers.get(codeStr) || { email: ENV_EMAIL, name: "Administrador" };
+  const pending = pendingUsers.get(codeStr) || { email: ENV_EMAIL, name: "Administrador", id: 0, must_change_password: 0 };
   pendingUsers.delete(codeStr);
   const session = await createSession(pending.email, pending.name);
   res.cookie("session_token", session.id, {
     httpOnly:true, secure:process.env.NODE_ENV==="production", sameSite:"lax",
     expires:new Date(session.expiresAt),
   });
-  res.json({ ok:true, token:session.id, expiresAt:session.expiresAt });
+  res.json({ ok:true, token:session.id, expiresAt:session.expiresAt, must_change_password: pending.must_change_password || 0, user_id: pending.id || 0 });
 });
 
 app.post("/api/auth/logout", async (req, res) => {
@@ -187,6 +188,19 @@ app.post("/api/auth/logout", async (req, res) => {
   if (token) await deleteSession(token);
   res.clearCookie("session_token");
   res.json({ ok:true });
+});
+
+app.post("/api/auth/change-initial-password", authMiddleware, async (req, res) => {
+  try {
+    const { user_id, new_password } = req.body;
+    if (!user_id || !new_password) return res.status(400).json({ error: "Dados inválidos." });
+    if (new_password.length < 6) return res.status(400).json({ error: "A senha deve ter ao menos 6 caracteres." });
+    await updateAdminUserPassword(Number(user_id), new_password);
+    await clearMustChangePassword(Number(user_id));
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message || "Erro ao alterar senha." });
+  }
 });
 
 app.get("/api/auth/me", async (req, res) => {
